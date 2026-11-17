@@ -7,6 +7,7 @@ import { TextField } from "@/components";
 import { useRouter } from "next/navigation";
 import statesData from "nigerian-states/src/states.json";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { postToApi, REGISTERED_USER_ID_KEY } from "@/lib/urep-api";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -33,7 +34,13 @@ export default function RegisterPage() {
     const [otp, setOtp] = useState('');
     const [isNINVerified, setIsNINVerified] = useState(false);
     const [otpSent, setOtpSent] = useState(false);
-    const [generatedOTP, setGeneratedOTP] = useState('');
+    const [otpRequestId, setOtpRequestId] = useState('');
+    const [isSendingOTP, setIsSendingOTP] = useState(false);
+    const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
+    const [ninError, setNinError] = useState('');
+    const [apiError, setApiError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [registeredUserId, setRegisteredUserId] = useState('');
     const requiresNIN = registrantType === 'youth_participant' || registrantType === 'corps_member';
 
     const registrantTypeOptions = [
@@ -65,40 +72,6 @@ export default function RegisterPage() {
     const [skillsInterest, setSkillsInterest] = useState('');
     const [yearsExperience, setYearsExperience] = useState('');
 
-    // Demo NIN database
-    const demoNINDatabase: Record<string, { name: string; dob: string; gender: string; phoneNumber: string }> = {
-        '12345678901': {
-            name: 'Adewale Johnson',
-            dob: '1995-03-15',
-            gender: 'Male',
-            phoneNumber: '08012345678'
-        },
-        '98765432109': {
-            name: 'Chiamaka Okonkwo',
-            dob: '1998-07-22',
-            gender: 'Female',
-            phoneNumber: '08098765432'
-        },
-        '11122233344': {
-            name: 'Ibrahim Musa',
-            dob: '1992-11-08',
-            gender: 'Male',
-            phoneNumber: '08011122233'
-        },
-        '55566677788': {
-            name: 'Blessing Adebayo',
-            dob: '2000-01-30',
-            gender: 'Female',
-            phoneNumber: '08055566677'
-        },
-        '99988877766': {
-            name: 'Chinedu Okafor',
-            dob: '1996-09-12',
-            gender: 'Male',
-            phoneNumber: '08099988877'
-        }
-    };
-
     // Set the program from URL parameter when component mounts
     useEffect(() => {
         const searchParams = new URLSearchParams(window.location.search);
@@ -122,7 +95,7 @@ export default function RegisterPage() {
         { value: 'african_youth', label: 'African/National Youth Day 2025' },
         { value: 'bakeprenuer', label: 'Bakeprenuer Nigeria' },
         { value: 'entrepreneurship', label: 'Entrepreneurship Programme for Unemployed Youths Of South-West Geopolitical Zone' },
-        { value: 'national_youth', label: 'National Youth Policy Validation Workshop' },
+        { value: 'national_youth', label: 'National Validation and Adoption Workshop on the National Youth Policy (2026–2030)' },
         { value: 'youth_migration', label: 'Youth Migration Awareness and Management Programme (YMAMP)' },
     ], []);
 
@@ -163,7 +136,9 @@ export default function RegisterPage() {
         }
         setIsNINVerified(false);
         setOtpSent(false);
+        setOtpRequestId('');
         setOtp('');
+        setNinError('');
         setName('');
         setDob('');
         setGender('');
@@ -175,83 +150,104 @@ export default function RegisterPage() {
         setNin('');
         setIsNINVerified(false);
         setOtpSent(false);
+        setOtpRequestId('');
         setOtp('');
-        setGeneratedOTP('');
+        setNinError('');
         setName('');
         setDob('');
         setGender('');
         setPhoneNumber('');
     };
 
-    // Send OTP (simulated with native validation feedback)
-    const handleSendOTP = () => {
-        const ninElem = document.getElementById('nin') as HTMLInputElement;
-        if (!nin || nin.length !== 11) {
-            if (ninElem) {
-                ninElem.setCustomValidity('Please enter a valid 11-digit NIN');
-                ninElem.reportValidity();
-            }
+    const handleSendOTP = async () => {
+        if (!/^\d{11}$/.test(nin)) {
+            setNinError('Please enter a valid 11-digit NIN.');
             return;
         }
 
-        if (!demoNINDatabase[nin]) {
-            if (ninElem) {
-                ninElem.setCustomValidity('NIN not found. Try demo: 12345678901, 98765432109, 11122233344, 55566677788');
-                ninElem.reportValidity();
+        setNinError('');
+        setIsSendingOTP(true);
+        try {
+            const lookup = await postToApi<{
+                nin: string;
+                first_name: string;
+                last_name: string;
+                phone_number: string;
+            }>('/api/nin/lookup', { nin });
+
+            if (!lookup.first_name || !lookup.last_name || !lookup.phone_number) {
+                throw new Error('The identity service returned incomplete details. Please try again.');
             }
-            return;
-        }
 
-        if (ninElem) {
-            ninElem.setCustomValidity('');
-        }
+            const fullName = `${lookup.first_name} ${lookup.last_name}`.trim();
+            setName(fullName);
+            setPhoneNumber(lookup.phone_number);
 
-        const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
-        setGeneratedOTP(randomOtp);
-        setOtpSent(true);
+            const otpResponse = await postToApi<{ request_id: string; expires_at: string }>(
+                '/api/nin/otp',
+                { phone_number: lookup.phone_number }
+            );
+            if (!otpResponse.request_id) {
+                throw new Error('The identity service did not return an OTP request. Please try again.');
+            }
+
+            setOtpRequestId(otpResponse.request_id);
+            setOtp('');
+            setOtpSent(true);
+        } catch (error) {
+            setNinError(error instanceof Error ? error.message : 'Unable to send a verification code. Please try again.');
+        } finally {
+            setIsSendingOTP(false);
+        }
     };
 
-    // Verify OTP and fill NIN data
-    const handleVerifyOTP = () => {
-        const otpElem = document.getElementById('otpInput') as HTMLInputElement;
-        if (!otp) {
-            if (otpElem) {
-                otpElem.setCustomValidity('Please enter the OTP');
-                otpElem.reportValidity();
-            }
+    const handleVerifyOTP = async () => {
+        if (!/^\d{6}$/.test(otp)) {
+            setNinError('Enter the six-digit verification code.');
             return;
         }
 
-        if (otp !== generatedOTP) {
-            if (otpElem) {
-                otpElem.setCustomValidity('Invalid OTP. Please check the code and try again.');
-                otpElem.reportValidity();
-            }
+        if (!otpRequestId) {
+            setNinError('Request a new verification code before continuing.');
             return;
         }
 
-        if (otpElem) {
-            otpElem.setCustomValidity('');
-        }
+        setNinError('');
+        setIsVerifyingOTP(true);
+        try {
+            const verification = await postToApi<{
+                request_id: string;
+                phone_number: string;
+                verified_at: string;
+            }>('/api/nin/otp/verify', {
+                request_id: otpRequestId,
+                otp_code: otp,
+            });
 
-        const ninData = demoNINDatabase[nin];
-        if (ninData) {
-            setName(ninData.name);
-            setDob(ninData.dob);
-            setGender(ninData.gender);
-            setPhoneNumber(ninData.phoneNumber);
+            if (!verification.verified_at || !verification.phone_number) {
+                throw new Error('The identity service could not confirm verification. Please try again.');
+            }
+
+            setPhoneNumber(verification.phone_number);
             setIsNINVerified(true);
-
             const ninElem = document.getElementById('nin') as HTMLInputElement;
             if (ninElem) {
                 ninElem.setCustomValidity('');
             }
+        } catch (error) {
+            setNinError(error instanceof Error ? error.message : 'Unable to verify the code. Please try again.');
+        } finally {
+            setIsVerifyingOTP(false);
         }
     };
 
     // Handle password changes
     const handlePasswordChange = (value: string) => {
         setPassword(value);
+        const passwordElem = document.getElementById('password') as HTMLInputElement;
+        if (passwordElem) {
+            passwordElem.setCustomValidity(value.length < 8 ? 'Password must be at least 8 characters' : '');
+        }
         const confirmElem = document.getElementById('confirmPassword') as HTMLInputElement;
         if (confirmElem && confirmPassword && value !== confirmPassword) {
             confirmElem.setCustomValidity('Passwords do not match');
@@ -407,8 +403,17 @@ export default function RegisterPage() {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleBack = () => {
+        if (currentStep > 1) {
+            handlePrev();
+            return;
+        }
+        router.back();
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError('');
 
         // Step 1 cross-field validation
         if (currentStep === 1) {
@@ -426,6 +431,14 @@ export default function RegisterPage() {
 
         // Step 2 cross-field validation
         if (currentStep === 2) {
+            if (password.length < 8) {
+                const passwordElem = document.getElementById('password') as HTMLInputElement;
+                if (passwordElem) {
+                    passwordElem.setCustomValidity('Password must be at least 8 characters');
+                    passwordElem.reportValidity();
+                }
+                return;
+            }
             if (password !== confirmPassword) {
                 const confirmElem = document.getElementById('confirmPassword') as HTMLInputElement;
                 if (confirmElem) {
@@ -452,35 +465,61 @@ export default function RegisterPage() {
             return;
         }
 
-        // Step 4 final submission
-        console.log('Registration submitted:', {
-            registrantType,
-            nin,
-            programme,
-            name,
-            email,
-            password,
-            dob,
-            gender,
-            phoneNumber,
-            state,
-            lga,
-            organisation,
-            governmentAgency: organisation === 'Government Agency' ? governmentAgency : undefined,
-            stateOfOrigin,
-            lgaOfOrigin,
-            disabilityStatus,
-            otherDisability,
-            maritalStatus,
-            educationLevel,
-            otherEducation,
-            occupationStatus,
-            otherOccupation,
-            skillsInterest,
-            yearsExperience
-        });
+        setIsSubmitting(true);
+        try {
+            const requestedProgramme = new URLSearchParams(window.location.search).get('program');
+            const selectedProgramme = programmeOptions.find((option) => option.value === requestedProgramme)?.value
+                || programme;
+            let userId = registeredUserId;
+            if (!userId) {
+                const registration = await postToApi<{ id: string; email: string }>('/api/auth/register', {
+                    full_name: name,
+                    email,
+                    password,
+                    registrant_type: registrantType,
+                    selected_program: selectedProgramme || 'general',
+                    organization: organisation,
+                    date_of_birth: dob,
+                    phone_number: phoneNumber,
+                    gender,
+                    state_of_residence: state,
+                    lga_of_residence: lga,
+                    ...(organisation === 'Government Agency' ? { government_agency: governmentAgency } : {}),
+                });
 
-        router.push(programme ? `/programs/${programme}` : '/');
+                if (!registration.id) {
+                    throw new Error('The registration service did not return a user ID. Please try again.');
+                }
+
+                userId = registration.id;
+                setRegisteredUserId(userId);
+            }
+
+            try {
+                sessionStorage.setItem(REGISTERED_USER_ID_KEY, userId);
+            } catch {
+                throw new Error('Your account was created, but browser storage is blocked. Enable storage and retry.');
+            }
+
+            await postToApi(`/api/auth/users/${encodeURIComponent(userId)}/profile`, {
+                state_of_origin: stateOfOrigin,
+                lga_of_origin: lgaOfOrigin,
+                marital_status: maritalStatus,
+                disability: disabilityStatus
+                    .map((value) => value === 'other' && otherDisability ? `other: ${otherDisability}` : value)
+                    .join(', '),
+                education_level: educationLevel === 'other' ? otherEducation : educationLevel,
+                occupation_status: occupationStatus === 'other' ? otherOccupation : occupationStatus,
+                skills: skillsInterest,
+                years_of_experience: yearsExperience,
+            });
+
+            router.push(selectedProgramme ? `/programs/${selectedProgramme}` : '/');
+        } catch (error) {
+            setApiError(error instanceof Error ? error.message : 'Unable to complete registration. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -565,6 +604,12 @@ export default function RegisterPage() {
 
                 {/* Form Body - Native HTML5 Validation */}
                 <form onSubmit={handleSubmit} className="space-y-2.5">
+                    {apiError && (
+                        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            {apiError}
+                        </p>
+                    )}
+
                     {/* ── STEP 1: Personal Information ── */}
                     {currentStep === 1 && (
                         <div className="space-y-3 animate-in fade-in duration-200">
@@ -575,6 +620,7 @@ export default function RegisterPage() {
                                 value={registrantType}
                                 onChange={handleRegistrantTypeChange}
                                 options={registrantTypeOptions}
+                                disabled={isSendingOTP || isVerifyingOTP}
                                 required
                                 id="registrantType"
                             />
@@ -632,19 +678,22 @@ export default function RegisterPage() {
                                                 value={nin}
                                                 onChange={(e) => handleNINChange(e.target.value)}
                                                 placeholder="Enter your 11-digit NIN"
+                                                inputMode="numeric"
+                                                pattern="[0-9]{11}"
                                                 className={`flex-1 px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#277B12] focus:border-[#277B12] placeholder:text-gray-400 ${isNINVerified ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'
                                                     }`}
                                                 required
                                                 maxLength={11}
-                                                disabled={isNINVerified}
+                                                disabled={isNINVerified || isSendingOTP || isVerifyingOTP}
                                             />
-                                            {!otpSent && !isNINVerified && (
+                                            {!isNINVerified && (
                                                 <button
                                                     type="button"
                                                     onClick={handleSendOTP}
-                                                    className="bg-[#277B12] text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-[#1b5c0d] transition-colors whitespace-nowrap"
+                                                    disabled={isSendingOTP || isVerifyingOTP}
+                                                    className="whitespace-nowrap rounded-lg bg-[#277B12] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1b5c0d] disabled:cursor-wait disabled:opacity-60"
                                                 >
-                                                    Send OTP
+                                                    {isSendingOTP ? 'Sending...' : otpSent ? 'Resend code' : 'Send code'}
                                                 </button>
                                             )}
                                         </div>
@@ -657,7 +706,7 @@ export default function RegisterPage() {
                                     {otpSent && !isNINVerified && (
                                         <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
                                             <p className="text-xs text-green-800">
-                                                An OTP was sent via SMS. (Demo code: <span className="font-bold underline tracking-wider">{generatedOTP}</span>)
+                                                A verification code was sent to {phoneNumber}.
                                             </p>
                                             <div className="flex gap-2">
                                                 <input
@@ -669,18 +718,26 @@ export default function RegisterPage() {
                                                         e.target.setCustomValidity('');
                                                     }}
                                                     placeholder="Enter 6-digit OTP"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]{6}"
                                                     className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#277B12] bg-white"
                                                     maxLength={6}
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={handleVerifyOTP}
-                                                    className="bg-[#277B12] text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-[#1b5c0d]"
+                                                    disabled={isVerifyingOTP}
+                                                    className="rounded-lg bg-[#277B12] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1b5c0d] disabled:cursor-wait disabled:opacity-60"
                                                 >
-                                                    Verify OTP
+                                                    {isVerifyingOTP ? 'Verifying...' : 'Verify code'}
                                                 </button>
                                             </div>
                                         </div>
+                                    )}
+                                    {ninError && (
+                                        <p role="alert" className="text-xs text-red-600">
+                                            {ninError}
+                                        </p>
                                     )}
                                 </>
                             )}
@@ -698,13 +755,11 @@ export default function RegisterPage() {
                                     required
                                 />
                                 <TextField
-                                    type={requiresNIN ? "text" : "date"}
+                                    type="date"
                                     label="Date of Birth"
-                                    placeholder={requiresNIN ? "Auto-filled via NIN" : undefined}
                                     value={dob}
                                     onChange={setDob}
                                     id="dob"
-                                    readOnly={requiresNIN}
                                     required
                                 />
                                 <TextField
@@ -717,29 +772,16 @@ export default function RegisterPage() {
                                     readOnly={requiresNIN}
                                     required
                                 />
-                                {requiresNIN ? (
-                                    <TextField
-                                        type="text"
-                                        label="Gender"
-                                        placeholder="Auto-filled via NIN"
-                                        value={gender}
-                                        onChange={setGender}
-                                        id="gender"
-                                        readOnly
-                                        required
-                                    />
-                                ) : (
-                                    <TextField
-                                        type="dropdown"
-                                        label="Gender"
-                                        placeholder="Select gender"
-                                        value={gender}
-                                        onChange={setGender}
-                                        options={genderOptions}
-                                        id="gender"
-                                        required
-                                    />
-                                )}
+                                <TextField
+                                    type="dropdown"
+                                    label="Gender"
+                                    placeholder="Select gender"
+                                    value={gender}
+                                    onChange={setGender}
+                                    options={genderOptions}
+                                    id="gender"
+                                    required
+                                />
                             </div>
                         </div>
                     )}
@@ -953,19 +995,17 @@ export default function RegisterPage() {
                     )}
 
                     {/* Progressive Stepper Controls */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-3">
-                        {currentStep > 1 ? (
-                            <button
-                                type="button"
-                                onClick={handlePrev}
-                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
-                            >
-                                <ChevronLeft size={16} />
-                                Previous
-                            </button>
-                        ) : <div />}
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
+                        <button
+                            type="button"
+                            onClick={handleBack}
+                            className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+                        >
+                            <ChevronLeft size={16} />
+                            Back
+                        </button>
 
-                        <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
                             <span className="text-xs text-gray-500">
                                 Already have an account?{' '}
                                 <Link href="/login" className="text-[#277B12] hover:underline font-semibold">
@@ -984,9 +1024,10 @@ export default function RegisterPage() {
                             ) : (
                                 <button
                                     type="submit"
-                                    className="flex items-center gap-1.5 px-6 py-2 rounded-lg text-sm font-semibold bg-[#277B12] text-white hover:bg-[#1b5c0d] transition-colors shadow-sm cursor-pointer"
+                                    disabled={isSubmitting}
+                                    className="flex items-center gap-1.5 rounded-lg bg-[#277B12] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1b5c0d] disabled:cursor-wait disabled:opacity-60"
                                 >
-                                    Submit Application
+                                    {isSubmitting ? 'Submitting...' : 'Submit Application'}
                                 </button>
                             )}
                         </div>

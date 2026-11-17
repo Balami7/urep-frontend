@@ -1,9 +1,13 @@
 'use client';
 import React, {useState} from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
 import {TextField} from "@/components";
+import Header from "@/components/Header";
 import {useRouter} from "next/navigation";
+import {
+    NATIONAL_YOUTH_DRAFT_KEY,
+    NationalYouthDraft,
+    REGISTERED_USER_ID_KEY,
+} from "@/lib/urep-api";
 
 export default function NationalYouthPage() {
 
@@ -25,14 +29,18 @@ export default function NationalYouthPage() {
     const [reason, setReason] = useState('');
     const [youthFocusedOrganization, setYouthFocusedOrganization] = useState('');
     const [urgentPriority, setUrgentPriority] = useState('');
+    const [submitError, setSubmitError] = useState('');
 
     const embassyOptions = [
-        { value: 'line_ministries', label: 'Line Ministries, Departments and Agencies' },
+        { value: 'line_ministries', label: 'Federal line Ministries, Departments and Agencies' },
         { value: 'state_ministry_of_youth_development', label: 'State Ministry of Youth Development' },
         { value: 'development_partnership', label: 'Development Partnership' },
         { value: 'youth_policy_coalition', label: 'Youth Policy Coalition' },
         { value: 'youth_ngo', label: 'Youth NGO' },
         { value: 'youth_cso', label: 'Youth CSO' },
+        { value: 'national_assembly', label: 'National Assembly' },
+        { value: 'un_system_donor', label: 'UN System or Donor' },
+        { value: 'vulnerable_youth_group', label: 'Vulnerable Youth Group' },
         {value: 'Private_Sector', label: 'Private Sector'},
         {value: 'academic_institution', label: 'Academic Institution'},
         {value: 'research_institution', label: 'Research Institution'},
@@ -76,44 +84,59 @@ export default function NationalYouthPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Handle login logic here
-        console.log('Login attempt with:', { stakeholder, organization, expectation });
+        setSubmitError('');
+        try {
+            if (!sessionStorage.getItem(REGISTERED_USER_ID_KEY)) {
+                setSubmitError('Your registration session could not be found. Please complete registration again.');
+                return;
+            }
+
+            const draft: NationalYouthDraft = {
+                stakeholder,
+                reason,
+                expectation,
+                organization,
+                youth_focused_organization: youthFocusedOrganization,
+                application,
+                previous_engagement: previousEngagement,
+                benefited_from_fmyd: benefitedFromFMYD,
+                urgent_priority: urgentPriority,
+                geopolitical_zone: geopoliticalZone,
+            };
+            sessionStorage.setItem(NATIONAL_YOUTH_DRAFT_KEY, JSON.stringify(draft));
+            routeToNextPage();
+        } catch {
+            setSubmitError('Your responses could not be saved in this browser. Please enable storage and try again.');
+        }
     };
     return (
-        <div className={'w-screen'}>
-            <div className={'mx-auto flex items-center px-1 py-2 h-20 bg-[#277B12] mb-4'}>
-                <Image className={'mr-2'} src={'/images/fmyd_logo.png'} alt={'logo'} width={80} height={80} />
-                <h1 className={'text-white text-2xl font-bold'}>Yopi Tracker</h1>
-                <div className={'grow'}>
-                    <div className={' flex items-center justify-center gap-2 md:gap-8'}>
-                        <Link className={'text-white text-lg'} href= '/'>Home</Link>
-                        <Link className={'text-white text-lg'} href= '/'>About</Link>
-                        <Link className={'text-white text-lg'} href= '/'>Program</Link>
-                        <Link className={'text-white text-lg'} href= '/'>Youth Policy</Link>
-                        <Link className={'text-white text-lg'} href= '/'>Privacy Policy</Link>
-                    </div>
+        <div className="min-h-screen w-full bg-gray-50">
+            <Header />
+            <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+                <div className="mb-4 text-center">
+                    <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+                        Program registration
+                    </h1>
+                    <p className="mt-1 text-sm text-gray-500">
+                        National Youth Policy (2026–2030)
+                    </p>
                 </div>
-                <div>
-                    <Link href="/login" className={' bg-white text-black hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-md px-4 py-2.5 text-center md:mr-2 mb-2 md:mb-0'}>Login</Link>
-                </div>
-            </div>
-            <div className={'flex flex-col items-center w-full'}>
-                <h1 className={'font-bold text-2xl'}>Federal Ministry of Youth Development</h1>
-                <h3 className={'text-xl font-medium'}>UNIFIED REGISTRATION PORTAL</h3>
-            </div>
-            <span className={'text-center font-bold text-lg text-black flex flex-row items-center m-4'}>PROGRAM SPECIFIC QUESTIONS -<h4 className={'text-black text-center font-medium'}> National Youth Validation Workshop</h4></span>
 
-            <div className={'flex flex-row mb-4 px-3'}>
-                <div className={'w-full h-4 bg-[#CECDCD]'}></div>
-                <div className={' w-full h-4 bg-[#277B12]'}></div>
-            </div>
-            <div className={'flex flex-row items-center justify-evenly px-3 mt-10'}>
-                <form onSubmit={handleSubmit} className={'w-[700px] gap-y-3.5'}>
-                    {/* Youth Professional field */}
+                <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+                    <div className="mb-4 border-b border-gray-100 pb-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#277B12]">
+                            Program-specific questions
+                        </span>
+                        <h2 className="text-base font-bold text-gray-900 sm:text-lg">
+                            National validation and adoption workshop
+                        </h2>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2">
                     <TextField
                         type="text"
-                        label="Are you a you a youth development stakeholder"
-                        placeholder="Yes, Area of expertise"
+                        label="Are you a youth development stakeholder? If yes, what is your area of expertise?"
+                        placeholder="Yes, please specify your area of expertise"
                         value={stakeholder}
                         onChange={setStakeholder}
                         required
@@ -122,7 +145,7 @@ export default function NationalYouthPage() {
 
                     <TextField
                         type="text"
-                        label="Why do you want to participate in National Youth Validation Workshop?"
+                        label="Why do you want to participate in the National Validation and Adoption Workshop?"
                         placeholder="Reason"
                         value={reason}
                         onChange={setReason}
@@ -132,7 +155,7 @@ export default function NationalYouthPage() {
 
                     <TextField
                         type="text"
-                        label="What is your expectation from National Youth Validation Workshop?"
+                        label="What is your expectation from the National Validation and Adoption Workshop?"
                         placeholder="Expectation"
                         value={expectation}
                         onChange={setExpectation}
@@ -149,7 +172,7 @@ export default function NationalYouthPage() {
                         onChange={setOrganization}
                         required
                         options={embassyOptions}
-                        id="embassy"
+                        id="organization"
                     />
 
                     <TextField
@@ -171,7 +194,7 @@ export default function NationalYouthPage() {
                         onChange={setApplication}
                         required
                         options={useOfOutcomeOptions}
-                        id="baking_business"
+                        id="application"
                     />
                     {/* Baking Business field */}
                     <TextField
@@ -182,7 +205,7 @@ export default function NationalYouthPage() {
                         onChange={setPreviousEngagement}
                         required
                         options={previousEngagementOptions}
-                        id="baking_business"
+                        id="previous_engagement"
                     />
                     {/* Benefited from FMYD field */}
                     <TextField
@@ -193,7 +216,7 @@ export default function NationalYouthPage() {
                         onChange={setBenefitedFromFMYD}
                         required
                         options={previousEngagementOptions}
-                        id="baking_business"
+                        id="benefited_from_fmyd"
                     />
                     {/* Urgent Priority field */}
                     <TextField
@@ -204,7 +227,7 @@ export default function NationalYouthPage() {
                         onChange={setUrgentPriority}
                         required
                         options={urgentPriorityOptions}
-                        id="baking_business"
+                        id="urgent_priority"
                     />
 
                     {/* Geopolitical Zone field */}
@@ -216,60 +239,33 @@ export default function NationalYouthPage() {
                         onChange={setGeopoliticalZone}
                         required
                         options={geographicalLocationOptions}
-                        id="baking_business"
+                        id="geopolitical_zone"
                     />
 
-                    {/* Back and Next button */}
-                    <div className={'flex justify-between items-center mt-7'}>
+                    {submitError && (
+                        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2">
+                            {submitError}
+                        </p>
+                    )}
+
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-4 sm:col-span-2">
                         <button
                             onClick={backToPreviousPage}
                             type="button"
-                            className={'w-36 justify-start bg-[#277B12] text-white py-4 px-4 mb-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-colors'}
+                            className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
                         >
                             Back
                         </button>
                         <button
-                            onClick={routeToNextPage}
                             type="submit"
-                            className={'w-36 justify-end bg-[#277B12] text-white py-4 px-4 mb-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-colors'}
+                            className="flex items-center gap-1.5 rounded-lg bg-[#277B12] px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1b5c0d]"
                         >
-                            Next
+                            Continue
                         </button>
                     </div>
-                </form>
-                {/*<div className={'flex flex-col'}>*/}
-                {/*    <div className={'px-20 py-10 bg-[#277B12] items-center justify-center rounded-lg mb-8'}>*/}
-                {/*        <h2 className={'text-white text-2xl font-bold text-center mb-4'}> Why Register? </h2>*/}
-                {/*        <ul className={'list-disc text-white leading-8 text-xl'}>*/}
-                {/*            <li>Access to Youth Empowerment Programs</li>*/}
-                {/*            <li>Real-time Monitoring of Youth Policies</li>*/}
-                {/*            <li>Networking Opportunities with Peers and Mentors</li>*/}
-                {/*            <li>Personalized Support and Guidance</li>*/}
-                {/*            <li>Stay Updated on Latest Youth Initiatives</li>*/}
-                {/*        </ul>*/}
-                {/*        <h2 className={'text-[#F9E79F] text-xl font-bold text-center my-4 justify-self-start'}> Need Help? </h2>*/}
-                {/*        <Link href={'/'} className={'text-white text-lg font-medium text-center underline'}>Get Assistance</Link>*/}
-                {/*    </div>*/}
-                {/*    /!* Back and Next button *!/*/}
-                {/*    <div className={'flex justify-between items-center mt-4'}>*/}
-                {/*        <button*/}
-                {/*            onClick={backToPreviousPage}*/}
-                {/*            type="button"*/}
-                {/*            className={'w-24 justify-start bg-[#277B12] text-white py-4 px-4 mb-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-colors'}*/}
-                {/*        >*/}
-                {/*            Back*/}
-                {/*        </button>*/}
-                {/*        <button*/}
-                {/*            onClick={routeToNextPage}*/}
-                {/*            type="submit"*/}
-                {/*            className={'w-24 justify-end bg-[#277B12] text-white py-4 px-4 mb-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-colors'}*/}
-                {/*        >*/}
-                {/*            Next*/}
-                {/*        </button>*/}
-                {/*    </div>*/}
-
-                {/*</div>*/}
-            </div>
+                    </form>
+                </section>
+            </main>
         </div>
     );
 }

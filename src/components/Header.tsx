@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import React from "react";
 import { usePathname } from "next/navigation";
-import { FaFacebook, FaInstagram, FaTelegram } from "react-icons/fa6";
 // import { ChevronDown } from "lucide-react";
 
 export function Header() {
@@ -135,36 +134,6 @@ export function Header() {
 
         {/* Login / Register Button — swaps based on current page */}
         <div className="flex flex-col items-end gap-1.5 shrink-0">
-          {/* Social icons above login button */}
-          <div className="flex flex-row items-center gap-3">
-            <a
-              href="https://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook"
-              className="text-[#277B12] hover:opacity-70 transition-opacity"
-            >
-              <FaFacebook size={16} />
-            </a>
-            <a
-              href="https://instagram.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram"
-              className="text-[#277B12] hover:opacity-70 transition-opacity"
-            >
-              <FaInstagram size={16} />
-            </a>
-            <a
-              href="https://t.me"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Telegram"
-              className="text-[#277B12] hover:opacity-70 transition-opacity"
-            >
-              <FaTelegram size={16} />
-            </a>
-          </div>
           <Link
             href={pathname === "/login" ? "/register" : "/login"}
             className="bg-[#277B12] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#1b5c0d] transition-colors"

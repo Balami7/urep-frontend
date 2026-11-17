@@ -21,25 +21,25 @@ export interface ProgramItem {
 export const defaultProgramsData: ProgramItem[] = [
   {
     id: "national_youth",
-    title: "National Youth Policy Validation Workshop",
+    title: "National Validation and Adoption Workshop on the National Youth Policy (2026–2030)",
     status: "active",
     background:
-      "The National Youth Policy Validation Workshop provides a platform for stakeholders to review and validate the revised National Youth Policy. It ensures inclusivity, stakeholder input, and alignment of the policy with current realities facing Nigerian youths.",
+      "The Federal Ministry of Youth Development, in collaboration with UNFPA, is concluding the review of the National Youth Policy. Following consultations held from October 2024 to June 2026, stakeholder contributions have been consolidated into a draft policy that guides youth development in education, employment, skills development, entrepreneurship, leadership and social inclusion. Stakeholders will validate and adopt the revised 2026–2030 policy and strengthen implementation commitments. The validation workshop is proposed for 24–26 November 2026, followed by the national launch on 14–18 December 2026. Venues are to be determined.",
     objectives: [
-      "To provide a platform for youth to voice their concerns and ideas.",
-      "To develop actionable solutions to challenges facing Nigerian youth.",
+      "To review and validate the revised National Youth Policy (2026–2030).",
+      "To secure stakeholder adoption of the revised National Youth Policy (2026–2030).",
     ],
     targetAudience: [
-      "Youth development stakeholders.",
-      "Government representatives (MDAs, State Ministries).",
-      "Civil Society Organisations (CSOs/NGOs).",
-      "Development partners and donor agencies.",
-      "Private sector organisations with youth-related initiatives.",
+      "State Ministries of Youth and Federal line MDAs.",
+      "Private sector organisations and the National Assembly.",
+      "Civil Society Organisations, NGOs and youth organisations.",
+      "United Nations system and donor partners.",
+      "Vulnerable youth groups.",
     ],
     mainImage: "/images/corpers.png",
     thumbnailImage: "/images/corpers.png",
     registerLink: "/register?program=national_youth",
-    date: "15/11/2025",
+    date: "24–26 November 2026",
   },
   {
     id: "bakeprenuer",

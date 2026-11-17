@@ -32,7 +32,7 @@ export default function ProgramInfo() {
     const programOptions = [
         { value: 'african_youth', label: 'African/National Youth Day 2025' },
         { value: 'bakeprenuer', label: 'Bakeprenuer Nigeria' },
-        { value: 'national_youth', label: 'National Youth Policy Validation Workshop' },
+        { value: 'national_youth', label: 'National Validation and Adoption Workshop on the National Youth Policy (2026–2030)' },
         { value: 'youth_migration', label: 'Youth Migration Awareness and Management Programme (YMAMP)' },
     ];
 

@@ -23,7 +23,7 @@ export default function ProgramStatistics() {
   const programs = [
     { id: 'youth_migration', name: 'Youth Migration Awareness and Management Programme (YMAMP)' },
     { id: 'youth_mental', name: 'National Youth Mental Health Conference' },
-    { id: 'national_youth', name: 'National Youth Conference' },
+    { id: 'national_youth', name: 'National Youth Policy Validation and Adoption Workshop (2026–2030)' },
     { id: 'african_youth', name: 'African Youth Conference' },
     { id: 'bakeprenuer', name: 'Bakeprenuer Program' },
   ];

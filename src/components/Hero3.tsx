@@ -37,14 +37,14 @@ export function Hero3() {
     {
       id: 1,
       img: '/corper1.png',
-      title: 'National Youth Policy',
+      title: 'National Youth Policy (2026–2030)',
       slug: 'national_youth',
       readMoreLink: 'https://nydb.ng/',
       registerLink: '/register',
       isExternalReadMore: true,
       hasRegisterButton: true,
-      description: 'The National Youth Policy provides a framework for youth development, inclusion, and participation across Nigeria.',
-      body: 'The National Youth Policy provides a framework for youth development, inclusion, and participation across Nigeria. It supports policy direction for youth empowerment, education, social inclusion, entrepreneurship, and national development.'
+      description: 'The revised National Youth Policy (2026–2030) sets a framework for youth development and meaningful youth participation in national development.',
+      body: 'The Federal Ministry of Youth Development, in collaboration with UNFPA, has consolidated stakeholder contributions from consultations held between October 2024 and June 2026 into a draft National Youth Policy (2026–2030), covering education, employment, skills development, entrepreneurship, leadership and social inclusion. A National Validation and Adoption Workshop is proposed for 24–26 November 2026, followed by the national launch on 14–18 December 2026. The activities will give stakeholders an opportunity to review the revised policy, address outstanding concerns, agree on its provisions, strengthen institutional commitment, and clarify implementation responsibilities. Venues are to be determined.'
     },
     {
       id: 2,
