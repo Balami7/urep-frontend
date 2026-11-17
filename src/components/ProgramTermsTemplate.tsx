@@ -196,7 +196,14 @@ export default function ProgramTermsTemplate({
               </span>
             </label>
 
-            <div>
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                Back
+              </button>
               <button
                 type="button"
                 onClick={handleContinue}
