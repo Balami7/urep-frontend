@@ -13,6 +13,8 @@ export default function SuccessPage() {
     const [referenceError, setReferenceError] = useState('');
     const [copiedReference, setCopiedReference] = useState(false);
     const [copyError, setCopyError] = useState('');
+    const [downloadError, setDownloadError] = useState('');
+    const [programName, setProgramName] = useState('');
 
     useEffect(() => {
         try {
@@ -20,6 +22,17 @@ export default function SuccessPage() {
             if (userId) {
                 setRegistrationReference(userId);
                 sessionStorage.removeItem(REGISTERED_USER_ID_KEY);
+            }
+            const programId = new URLSearchParams(window.location.search).get('program');
+            const programNames: Record<string, string> = {
+                african_youth: 'African/National Youth Day 2025',
+                bakeprenuer: 'Bakeprenuer Nigeria',
+                entrepreneurship: 'Entrepreneurship Programme for Unemployed Youths',
+                national_youth: 'National Validation and Adoption Workshop on the National Youth Policy (2026–2030)',
+                youth_migration: 'Youth Migration Awareness and Management Programme',
+            };
+            if (programId) {
+                setProgramName(programNames[programId] ?? 'Youth Development Programme');
             }
         } catch {
             setReferenceError('Could not access the registration reference in this browser.');
@@ -46,18 +59,103 @@ export default function SuccessPage() {
         }
     };
 
+    const handleDownloadConfirmation = async () => {
+        if (!registrationReference) return;
+
+        try {
+            setDownloadError('');
+            const { jsPDF } = await import('jspdf');
+            const pdf = new jsPDF();
+            const margin = 24;
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const contentWidth = pageWidth - margin * 2;
+
+            pdf.setProperties({
+                title: 'UREP Registration Confirmation',
+                subject: 'Registration confirmation slip',
+            });
+            pdf.setFillColor(39, 123, 18);
+            pdf.rect(0, 0, pageWidth, 14, 'F');
+            pdf.setTextColor(39, 123, 18);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(18);
+            pdf.text('Registration Confirmation', margin, 38);
+
+            pdf.setTextColor(35, 35, 35);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(11);
+            pdf.text('Unified Registration Portal', margin, 48);
+            pdf.text('Federal Ministry of Youth Development', margin, 55);
+
+            pdf.setDrawColor(220, 220, 220);
+            pdf.line(margin, 66, pageWidth - margin, 66);
+
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(11);
+            pdf.text('Registration reference', margin, 82);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(12);
+            pdf.text(
+                pdf.splitTextToSize(registrationReference, contentWidth),
+                margin,
+                91
+            );
+
+            let nextY = 111;
+            if (programName) {
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(11);
+                pdf.text('Programme', margin, nextY);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(11);
+                const wrappedProgramName = pdf.splitTextToSize(programName, contentWidth);
+                pdf.text(wrappedProgramName, margin, nextY + 9);
+                nextY += 9 + wrappedProgramName.length * 6 + 8;
+            }
+
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(11);
+            pdf.text('Confirmation date', margin, nextY);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(11);
+            pdf.text(new Date().toLocaleDateString(), margin, nextY + 9);
+
+            pdf.setFontSize(9);
+            pdf.setTextColor(110, 110, 110);
+            pdf.text(
+                'Please keep this slip and your registration reference for your records.',
+                margin,
+                270,
+                { maxWidth: contentWidth }
+            );
+
+            const safeReference = registrationReference.replace(/[^a-zA-Z0-9-]/g, '');
+            pdf.save(`UREP-confirmation-${safeReference || 'registration'}.pdf`);
+        } catch {
+            setDownloadError('Unable to download your confirmation slip. Please try again.');
+        }
+    };
+
     return (
-        <div className={'w-screen min-h-screen py-3 pt-1 bg-white'}>
-            <div className={'flex items-center justify-center px-1 py-2 mb-4'}>
-                <Image src={'/images/success.png'} alt={'success'} width={600} height={400} className={'w-full max-w-[600px] h-auto mx-auto my-4 sm:my-8'} />
-            </div>
-            <div className={'w-full bg-white px-4 sm:px-8 md:px-16 lg:px-44 items-center justify-center flex flex-col'}>
-                <h1 className={'text-black font-bold text-xl sm:text-2xl text-center my-6 sm:my-10'}>You have successfully registered with UREP</h1>
-                <h2 className={'text-black font-medium text-lg sm:text-xl text-center'}>Your registration reference:</h2>
+        <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 px-4 py-6 sm:py-8">
+            <main className="flex w-full max-w-3xl flex-col items-center rounded-2xl border border-gray-100 bg-white px-5 py-6 shadow-sm sm:px-8 sm:py-8">
+                <Image
+                    src="/images/success.png"
+                    alt="Registration successful"
+                    width={600}
+                    height={400}
+                    className="mx-auto mb-2 h-auto w-full max-w-[280px] sm:max-w-[340px]"
+                />
+                <h1 className="mb-1 text-center text-xl font-bold text-gray-900 sm:text-2xl">
+                    Registration successful
+                </h1>
+                <p className="text-center text-sm text-gray-600">
+                    Your registration reference:
+                </p>
 
                 {registrationReference ? (
-                    <div className={'bg-gray-100 px-4 sm:px-8 py-4 sm:py-6 mt-6 flex flex-row items-center justify-center gap-4 rounded-lg'}>
-                        <p className={'break-all font-bold text-sm sm:text-base'}>{registrationReference}</p>
+                    <div className="mt-3 flex max-w-full items-center justify-center gap-4 rounded-lg bg-gray-100 px-4 py-3">
+                        <p className="break-all text-sm font-bold text-gray-900 sm:text-base">{registrationReference}</p>
                         <button
                             type="button"
                             onClick={handleCopyReference}
@@ -68,7 +166,7 @@ export default function SuccessPage() {
                         </button>
                     </div>
                 ) : (
-                    <p role={referenceLoaded ? "status" : undefined} className="mt-6 text-center text-sm text-gray-600">
+                    <p role={referenceLoaded ? "status" : undefined} className="mt-3 text-center text-sm text-gray-600">
                         {referenceLoaded
                             ? referenceError || 'Registration reference is unavailable. Please contact support if you need help.'
                             : 'Loading registration reference...'}
@@ -79,11 +177,11 @@ export default function SuccessPage() {
 
                 {/* QR CODE*/}
                 {registrationReference && (
-                    <div className="flex flex-col items-center justify-center mt-4 mb-6">
-                        <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                    <div className="my-4 flex flex-col items-center justify-center">
+                        <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
                             <QRCode
                                 value={registrationReference}
-                                size={200}
+                                size={144}
                                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                                 viewBox={`0 0 256 256`}
                             />
@@ -92,12 +190,24 @@ export default function SuccessPage() {
                 )}
 
 
-                <div className={'flex flex-col sm:flex-row items-center justify-center sm:justify-between w-full max-w-[800px] gap-4 mt-4 sm:mt-5 px-4'}>
-                    <button className={'w-full sm:w-auto bg-[#277B12] text-white font-bold hover:bg-green-600 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-sm sm:text-md px-4 sm:px-6 py-3 sm:py-4 text-center border-white border-2'} onClick={navigateToDashboard}>Go to Dashboard</button>
-                    <button className={'w-full sm:w-auto border-[#277B12] text-black font-bold hover:bg-green-600 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-sm sm:text-md px-4 py-3 sm:py-4 text-center border-2'}>Download Confirmation slip </button>
-                    <button className={'w-full sm:w-auto bg-white text-black font-bold hover:bg-green-600 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-sm sm:text-md px-4 sm:px-6 py-3 sm:py-4 text-center border-[#277B12] border-2'} onClick={navigateToHome}>Back to Home</button>
+                <div className="mt-2 flex w-full max-w-2xl flex-col items-center justify-center gap-3 sm:flex-row">
+                    <button className="w-full rounded-lg border-2 border-[#277B12] bg-[#277B12] px-4 py-2.5 text-center text-sm font-bold text-white transition-colors hover:bg-[#1b5c0d] sm:w-auto" onClick={navigateToDashboard}>Go to Dashboard</button>
+                    <button
+                        type="button"
+                        onClick={handleDownloadConfirmation}
+                        disabled={!registrationReference}
+                        className="w-full rounded-lg border-2 border-[#277B12] px-4 py-2.5 text-center text-sm font-bold text-gray-900 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                    >
+                        Download Confirmation Slip
+                    </button>
+                    <button className="w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-2.5 text-center text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto" onClick={navigateToHome}>Back to Home</button>
                 </div>
-            </div>
+                {downloadError && (
+                    <p role="alert" className="mt-4 text-center text-sm text-red-600">
+                        {downloadError}
+                    </p>
+                )}
+            </main>
         </div>
     );
 }
