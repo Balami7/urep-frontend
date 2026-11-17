@@ -21,7 +21,6 @@ export default function SuccessPage() {
             const userId = sessionStorage.getItem(REGISTERED_USER_ID_KEY);
             if (userId) {
                 setRegistrationReference(userId);
-                sessionStorage.removeItem(REGISTERED_USER_ID_KEY);
             }
             const programId = new URLSearchParams(window.location.search).get('program');
             const programNames: Record<string, string> = {
@@ -42,7 +41,7 @@ export default function SuccessPage() {
     }, []);
 
     const navigateToDashboard = () => {
-        router.push('/admin');
+        router.push('/dashboard');
     }
 
     const navigateToHome = () => {
