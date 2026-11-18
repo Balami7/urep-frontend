@@ -23,59 +23,6 @@ import { postToApi, REGISTERED_USER_ID_KEY } from '@/lib/urep-api';
 
 type DashboardTab = 'profile' | 'programs';
 
-const registrantTypeOptions = [
-  { value: 'youth_participant', label: 'Youth Participant' },
-  { value: 'corps_member', label: 'Corps Member' },
-  { value: 'guest', label: 'Guest' },
-  { value: 'ministry_of_youth', label: 'Ministry of Youth' },
-];
-
-const organisationOptions = [
-  { value: 'NGO', label: 'NGO' },
-  { value: 'Government Agency', label: 'Government Agency' },
-  { value: 'Private Sector', label: 'Private Sector' },
-  { value: 'Educational Institution', label: 'Educational Institution' },
-  { value: 'Other', label: 'Other' },
-];
-
-const governmentAgencyOptions = [
-  { value: 'FEDERAL MINISTRY OF YOUTH DEVELOPMENT', label: 'FEDERAL MINISTRY OF YOUTH DEVELOPMENT' },
-  { value: 'CITIZENSHIP AND LEADERSHIP TRAINING CENTRE', label: 'CITIZENSHIP AND LEADERSHIP TRAINING CENTRE' },
-  { value: 'FEDERAL MIN. OF WOMEN AFFAIRS AND SOCIAL DEVELOPMENT', label: 'FEDERAL MIN. OF WOMEN AFFAIRS AND SOCIAL DEVELOPMENT' },
-  { value: 'FEDERAL MINISTRY OF ENVIRONMENT', label: 'FEDERAL MINISTRY OF ENVIRONMENT' },
-  { value: 'FEDERAL MINISTRY OF EDUCATION', label: 'FEDERAL MINISTRY OF EDUCATION' },
-  { value: 'FEDERAL MINISTRY OF HUMANITARIAN AFFAIRS AND POVERTY REDUCTION', label: 'FEDERAL MINISTRY OF HUMANITARIAN AFFAIRS AND POVERTY REDUCTION' },
-  { value: 'FEDERAL MINISTRY OF LABOUR AND EMPLOYMENT', label: 'FEDERAL MINISTRY OF LABOUR AND EMPLOYMENT' },
-  { value: 'FEDERAL MINISTRY OF WATER RESOURCES AND SANITATION', label: 'FEDERAL MINISTRY OF WATER RESOURCES AND SANITATION' },
-  { value: 'FEDERAL MINISTRY OF INNOVATION, SCIENCE AND TECHNOLOGY', label: 'FEDERAL MINISTRY OF INNOVATION, SCIENCE AND TECHNOLOGY' },
-  { value: 'FEDERAL MINISTRY OF AGRICULTURE AND FOOD SECURITY', label: 'FEDERAL MINISTRY OF AGRICULTURE AND FOOD SECURITY' },
-  { value: 'NATIONAL INFORMATION, TECHNOLOGY DEVELOPMENT AGENCY (NITDA)', label: 'NATIONAL INFORMATION, TECHNOLOGY DEVELOPMENT AGENCY (NITDA)' },
-  { value: 'NATIONAL YOUTH SERVICE CORPS (NYSC)', label: 'NATIONAL YOUTH SERVICE CORPS (NYSC)' },
-  { value: 'NATIONAL DRUGS LAW ENFORCEMENT AGENCY (NDLEA)', label: 'NATIONAL DRUGS LAW ENFORCEMENT AGENCY (NDLEA)' },
-  { value: 'NIGERIAN DATA PROTECTION COMMISSION', label: 'NIGERIAN DATA PROTECTION COMMISSION' },
-  { value: 'NIGERIAN EDUCATION LOAN FUND (NELFUND)', label: 'NIGERIAN EDUCATION LOAN FUND (NELFUND)' },
-  { value: 'SMALL AND MEDIUM ENTERPRISES DEVELOPMENT AGENCY OF NIGERIA', label: 'SMALL AND MEDIUM ENTERPRISES DEVELOPMENT AGENCY OF NIGERIA' },
-  { value: 'FEDERAL MINISTRY OF INFORMATION AND NATIONAL ORIENTATION', label: 'FEDERAL MINISTRY OF INFORMATION AND NATIONAL ORIENTATION' },
-  { value: 'FEDERAL MINISTRY OF HEALTH AND SOCIAL WELFARE', label: 'FEDERAL MINISTRY OF HEALTH AND SOCIAL WELFARE' },
-  { value: 'FEDERAL MINISTRY OF COMMUNICATION, INNOVATION AND DIGITAL ECONOMY', label: 'FEDERAL MINISTRY OF COMMUNICATION, INNOVATION AND DIGITAL ECONOMY' },
-  { value: 'FEDERAL MINISTRY OF SCIENCE AND TECNOLOGY AND INNOVATION', label: 'FEDERAL MINISTRY OF SCIENCE AND TECNOLOGY AND INNOVATION' },
-  { value: 'FEDERAL MINISTRY OF BUGET AND ECONOMIC PLANNING', label: 'FEDERAL MINISTRY OF BUGET AND ECONOMIC PLANNING' },
-  { value: 'FEDERAL MINISTRY OF INDUSTRY, TRADE AND INVESTEMENT', label: 'FEDERAL MINISTRY OF INDUSTRY, TRADE AND INVESTEMENT' },
-  { value: 'NIGERIAN IMMIGRATION SERVICES', label: 'NIGERIAN IMMIGRATION SERVICES' },
-  { value: 'FEDERAL MINISTRY OF JUSTICE', label: 'FEDERAL MINISTRY OF JUSTICE' },
-  { value: 'NATIONAL SPORTS COMMISSION', label: 'NATIONAL SPORTS COMMISSION' },
-  { value: 'NATIONAL DIRECTORATE OF EMPLOYMENT (NDE)', label: 'NATIONAL DIRECTORATE OF EMPLOYMENT (NDE)' },
-  { value: 'NATIONAL BOARD FOR TECHNICAL EDUCATION (NBTE)', label: 'NATIONAL BOARD FOR TECHNICAL EDUCATION (NBTE)' },
-  { value: 'NATIONAL HUMAN RIGHTS COMMISSION (NHRC)', label: 'NATIONAL HUMAN RIGHTS COMMISSION (NHRC)' },
-  { value: 'NATIONAL POPULATION COMMISSION', label: 'NATIONAL POPULATION COMMISSION' },
-];
-
-const genderOptions = [
-  { value: 'Male', label: 'Male' },
-  { value: 'Female', label: 'Female' },
-  { value: 'Other', label: 'Other' },
-];
-
 const stateOptions = Object.keys(statesData).map((state) => ({ value: state, label: state }));
 const maritalStatusOptions = [
   { value: 'single', label: 'Single' },
@@ -109,16 +56,6 @@ const occupationStatusOptions = [
 ];
 
 type ProfileValues = {
-  registrant_type: string;
-  organization: string;
-  government_agency: string;
-  full_name: string;
-  date_of_birth: string;
-  phone_number: string;
-  gender: string;
-  email: string;
-  state_of_residence: string;
-  lga_of_residence: string;
   state_of_origin: string;
   lga_of_origin: string;
   marital_status: string;
@@ -126,6 +63,7 @@ type ProfileValues = {
   education_level: string;
   occupation_status: string;
   skills: string;
+  area_of_interest: string;
   years_of_experience: string;
 };
 
@@ -134,7 +72,7 @@ type ProfileField = keyof ProfileValues;
 interface ProfileFieldConfig {
   name: ProfileField;
   label: string;
-  type?: 'text' | 'email' | 'date' | 'dropdown';
+  type?: 'text' | 'dropdown';
   options?: { value: string; label: string }[];
 }
 
@@ -150,45 +88,18 @@ function getLgaOptions(selectedState: string) {
 }
 
 const profileFields: ProfileFieldConfig[] = [
-  { name: 'registrant_type', label: 'Registrant type', type: 'dropdown', options: registrantTypeOptions },
-  { name: 'organization', label: 'Organisation', type: 'dropdown', options: organisationOptions },
-  { name: 'government_agency', label: 'Government agency', type: 'dropdown', options: governmentAgencyOptions },
-  { name: 'full_name', label: 'Full name' },
-  { name: 'date_of_birth', label: 'Date of birth', type: 'date' },
-  { name: 'phone_number', label: 'Phone number' },
-  { name: 'gender', label: 'Gender', type: 'dropdown', options: genderOptions },
-  { name: 'email', label: 'Email address', type: 'email' },
-  { name: 'state_of_residence', label: 'State of residence', type: 'dropdown', options: stateOptions },
-  { name: 'lga_of_residence', label: 'LGA of residence', type: 'dropdown' },
   { name: 'state_of_origin', label: 'State of origin', type: 'dropdown', options: stateOptions },
   { name: 'lga_of_origin', label: 'LGA of origin', type: 'dropdown' },
   { name: 'marital_status', label: 'Marital status', type: 'dropdown', options: maritalStatusOptions },
   { name: 'disability', label: 'Disability', type: 'dropdown', options: disabilityOptions },
   { name: 'education_level', label: 'Education level', type: 'dropdown', options: educationLevelOptions },
   { name: 'occupation_status', label: 'Occupation status', type: 'dropdown', options: occupationStatusOptions },
-  { name: 'skills', label: 'Skills and interests' },
+  { name: 'skills', label: 'Skills' },
+  { name: 'area_of_interest', label: 'Area of interest' },
   { name: 'years_of_experience', label: 'Years of experience' },
 ];
 
 const profileSections = [
-  {
-    title: 'Personal info',
-    description: 'Your registration type, organisation, and personal details.',
-    fields: [
-      'registrant_type',
-      'organization',
-      'government_agency',
-      'full_name',
-      'date_of_birth',
-      'phone_number',
-      'gender',
-    ],
-  },
-  {
-    title: 'Contact & residence',
-    description: 'Your email address and current residential location.',
-    fields: ['email', 'state_of_residence', 'lga_of_residence'],
-  },
   {
     title: 'Demographics',
     description: 'Your origin, marital status, and accessibility information.',
@@ -197,21 +108,11 @@ const profileSections = [
   {
     title: 'Education & skills',
     description: 'Your education, occupation, skills, and experience.',
-    fields: ['education_level', 'occupation_status', 'skills', 'years_of_experience'],
+    fields: ['education_level', 'occupation_status', 'skills', 'area_of_interest', 'years_of_experience'],
   },
 ] as const;
 
 const emptyProfile: ProfileValues = {
-  registrant_type: '',
-  organization: '',
-  government_agency: '',
-  full_name: '',
-  date_of_birth: '',
-  phone_number: '',
-  gender: '',
-  email: '',
-  state_of_residence: '',
-  lga_of_residence: '',
   state_of_origin: '',
   lga_of_origin: '',
   marital_status: '',
@@ -219,6 +120,7 @@ const emptyProfile: ProfileValues = {
   education_level: '',
   occupation_status: '',
   skills: '',
+  area_of_interest: '',
   years_of_experience: '',
 };
 
@@ -243,14 +145,8 @@ export default function UserDashboardPage() {
 
   const handleProfileChange = (field: ProfileField, value: string) => {
     setProfile((currentProfile) => {
-      if (field === 'state_of_residence') {
-        return { ...currentProfile, state_of_residence: value, lga_of_residence: '' };
-      }
       if (field === 'state_of_origin') {
         return { ...currentProfile, state_of_origin: value, lga_of_origin: '' };
-      }
-      if (field === 'organization' && value !== 'Government Agency') {
-        return { ...currentProfile, organization: value, government_agency: '' };
       }
       return { ...currentProfile, [field]: value };
     });
@@ -450,21 +346,14 @@ export default function UserDashboardPage() {
                     {profileSections[activeProfileStep].fields.map((fieldName) => {
                       const field = profileFields.find((profileField) => profileField.name === fieldName);
                       if (!field) return null;
-                      if (field.name === 'government_agency' && profile.organization !== 'Government Agency') {
-                        return null;
-                      }
 
-                      const options = field.name === 'lga_of_residence'
-                        ? getLgaOptions(profile.state_of_residence)
-                        : field.name === 'lga_of_origin'
-                          ? getLgaOptions(profile.state_of_origin)
-                          : field.options ?? [];
-                      const isLgaField = field.name === 'lga_of_residence' || field.name === 'lga_of_origin';
-                      const hasSelectedState = field.name === 'lga_of_residence'
-                        ? Boolean(profile.state_of_residence)
-                        : field.name === 'lga_of_origin'
-                          ? Boolean(profile.state_of_origin)
-                          : true;
+                      const options = field.name === 'lga_of_origin'
+                        ? getLgaOptions(profile.state_of_origin)
+                        : field.options ?? [];
+                      const isLgaField = field.name === 'lga_of_origin';
+                      const hasSelectedState = field.name === 'lga_of_origin'
+                        ? Boolean(profile.state_of_origin)
+                        : true;
 
                       return (
                       <div key={field.name}>
@@ -475,6 +364,7 @@ export default function UserDashboardPage() {
                           value={profile[field.name]}
                           onChange={(value) => handleProfileChange(field.name, value)}
                           options={options}
+                          required
                           disabled={isLgaField && !hasSelectedState}
                           placeholder={field.type === 'dropdown' ? `Select ${field.label.toLowerCase()}` : `Enter ${field.label.toLowerCase()}`}
                         />

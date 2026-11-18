@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { TextField } from '../../components';
@@ -8,18 +8,24 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
     const router = useRouter();
-    const navigateToRegisterPage = () => {
-        router.push('/dashboard');
-    }
-
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
+    const [isStaffLogin, setIsStaffLogin] = useState(false);
+
+    useEffect(() => {
+        setIsStaffLogin(new URLSearchParams(window.location.search).get('type') === 'staff');
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
-        navigateToRegisterPage();
         e.preventDefault();
-        console.log('Login attempt with:', { email, password, rememberMe });
+        if (isStaffLogin && !/^[^@\s]+@[^@\s]+\.gov\.ng$/i.test(email)) {
+            const emailInput = document.getElementById('email') as HTMLInputElement;
+            emailInput.setCustomValidity('Use your official government email address ending in .gov.ng.');
+            emailInput.reportValidity();
+            return;
+        }
+        router.push('/dashboard');
     };
 
     return (
@@ -57,19 +63,27 @@ export default function LoginPage() {
                             className="h-16 sm:h-20 w-auto object-contain mb-3"
                             priority
                         />
-                        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome to Unified Registration Portal</h1>
-                        <p className="text-sm text-gray-500 mt-1">Sign in to your youth portal account</p>
+                        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+                            {isStaffLogin ? 'Ministry Staff Sign In' : 'Welcome to Unified Registration Portal'}
+                        </h1>
+                        <p className="text-sm text-gray-500 mt-1">
+                            {isStaffLogin ? 'Sign in with your official government email' : 'Sign in to your youth portal account'}
+                        </p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-1">
                         <TextField
                             type="email"
-                            label="Email Address"
-                            placeholder="you@example.com"
+                            label={isStaffLogin ? 'Official Government Email' : 'Email Address'}
+                            placeholder={isStaffLogin ? 'name@agency.gov.ng' : 'you@example.com'}
                             value={email}
-                            onChange={setEmail}
+                            onChange={(value) => {
+                                setEmail(value);
+                                (document.getElementById('email') as HTMLInputElement | null)?.setCustomValidity('');
+                            }}
                             required
                             id="email"
+                            hint={isStaffLogin ? 'Staff accounts require an official .gov.ng email address.' : undefined}
                         />
                         <TextField
                             type="password"
@@ -106,9 +120,26 @@ export default function LoginPage() {
 
                     <p className="text-center text-sm text-gray-500 mt-6">
                         Don&apos;t have an account?{' '}
-                        <Link href="/register" className="text-[#277B12] hover:underline font-semibold">
+                        <Link href={isStaffLogin ? '/register?type=staff' : '/register'} className="text-[#277B12] hover:underline font-semibold">
                             Register
                         </Link>
+                    </p>
+                    <p className="text-center text-sm text-gray-500 mt-3">
+                        {isStaffLogin ? 'Not Ministry staff? ' : 'Ministry staff? '}
+                        <Link
+                            href={isStaffLogin ? '/login' : '/login?type=staff'}
+                            className="text-[#277B12] hover:underline font-semibold"
+                        >
+                            {isStaffLogin ? 'Participant sign in' : 'Staff sign in'}
+                        </Link>
+                        {!isStaffLogin && (
+                            <>
+                                {' · '}
+                                <Link href="/register?type=staff" className="text-[#277B12] hover:underline font-semibold">
+                                    Staff sign up
+                                </Link>
+                            </>
+                        )}
                     </p>
                 </div>
             </div>

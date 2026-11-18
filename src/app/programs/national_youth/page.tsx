@@ -127,8 +127,8 @@ export default function NationalYouthPage() {
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-[#277B12]">
                             Program-specific questions
                         </span>
-                        <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-                            National validation and adoption workshop
+                        <h2 className="rounded-md bg-[#277B12] px-3 py-2 text-base font-bold uppercase tracking-wide text-white sm:text-lg">
+                            National Validation and Adoption Workshop of the National Youth Policy
                         </h2>
                     </div>
 
@@ -199,7 +199,7 @@ export default function NationalYouthPage() {
                     {/* Baking Business field */}
                     <TextField
                         type="dropdown"
-                        label="How have you previously engaged with the Federal Ministry of Youth Development?"
+                        label="Have you previously participated in any Federal Ministry of Youth Development programme, study, workshop or training?"
                         placeholder="Workshops/Training"
                         value={previousEngagement}
                         onChange={setPreviousEngagement}

@@ -1,13 +1,48 @@
 'use client'
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import Image from "next/image";
 import {FaCopy} from "react-icons/fa";
 import {useRouter} from "next/navigation";
 import QRCode from "react-qr-code";
-import {REGISTERED_USER_ID_KEY} from "@/lib/urep-api";
+import {REGISTRATION_REFERENCE_KEY} from "@/lib/urep-api";
+
+async function qrCodeToPng(svg: SVGElement): Promise<string> {
+    const svgCopy = svg.cloneNode(true) as SVGElement;
+    svgCopy.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svgCopy.setAttribute('width', '256');
+    svgCopy.setAttribute('height', '256');
+
+    const imageUrl = URL.createObjectURL(
+        new Blob([new XMLSerializer().serializeToString(svgCopy)], {
+            type: 'image/svg+xml;charset=utf-8',
+        })
+    );
+
+    try {
+        const image = new window.Image();
+        await new Promise<void>((resolve, reject) => {
+            image.onload = () => resolve();
+            image.onerror = () => reject(new Error('Could not render the QR code.'));
+            image.src = imageUrl;
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Could not prepare the QR code for download.');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/png');
+    } finally {
+        URL.revokeObjectURL(imageUrl);
+    }
+}
 
 export default function SuccessPage() {
     const router = useRouter();
+    const qrCodeRef = useRef<HTMLDivElement>(null);
     const [registrationReference, setRegistrationReference] = useState('');
     const [referenceLoaded, setReferenceLoaded] = useState(false);
     const [referenceError, setReferenceError] = useState('');
@@ -18,9 +53,9 @@ export default function SuccessPage() {
 
     useEffect(() => {
         try {
-            const userId = sessionStorage.getItem(REGISTERED_USER_ID_KEY);
-            if (userId) {
-                setRegistrationReference(userId);
+            const reference = sessionStorage.getItem(REGISTRATION_REFERENCE_KEY);
+            if (reference) {
+                setRegistrationReference(reference);
             }
             const programId = new URLSearchParams(window.location.search).get('program');
             const programNames: Record<string, string> = {
@@ -99,8 +134,14 @@ export default function SuccessPage() {
                 margin,
                 91
             );
+            const qrCodeSvg = qrCodeRef.current?.querySelector('svg');
+            if (!qrCodeSvg) {
+                throw new Error('The registration QR code is unavailable.');
+            }
+            const qrCodePng = await qrCodeToPng(qrCodeSvg);
+            pdf.addImage(qrCodePng, 'PNG', pageWidth - margin - 44, 74, 44, 44);
 
-            let nextY = 111;
+            let nextY = 128;
             if (programName) {
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(11);
@@ -177,7 +218,7 @@ export default function SuccessPage() {
                 {/* QR CODE*/}
                 {registrationReference && (
                     <div className="my-4 flex flex-col items-center justify-center">
-                        <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+                        <div ref={qrCodeRef} className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
                             <QRCode
                                 value={registrationReference}
                                 size={144}

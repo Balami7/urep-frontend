@@ -7,47 +7,45 @@ import { TextField } from "@/components";
 import { useRouter } from "next/navigation";
 import statesData from "nigerian-states/src/states.json";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { postToApi, REGISTERED_USER_ID_KEY } from "@/lib/urep-api";
+import {
+    postToApi,
+    REGISTERED_USER_ID_KEY,
+    REGISTRATION_REFERENCE_KEY,
+} from "@/lib/urep-api";
 
 export default function RegisterPage() {
     const router = useRouter();
 
     const [currentStep, setCurrentStep] = useState(1);
-    const totalSteps = 4;
 
     const [registrantType, setRegistrantType] = useState('');
-    const [nin, setNin] = useState('');
+    const [isDedicatedStaffSignup, setIsDedicatedStaffSignup] = useState(false);
     const [programme, setProgramme] = useState('');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [dob, setDob] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [gender, setGender] = useState('');
-    const [state, setState] = useState('');
-    const [lga, setLga] = useState('');
     const [stateOptions, setStateOptions] = useState<{ value: string; label: string }[]>([]);
-    const [lgaOptions, setLgaOptions] = useState<{ value: string; label: string }[]>([]);
-    const [organisation, setOrganisation] = useState('');
-    const [governmentAgency, setGovernmentAgency] = useState('');
-    const [otp, setOtp] = useState('');
-    const [isNINVerified, setIsNINVerified] = useState(false);
-    const [otpSent, setOtpSent] = useState(false);
-    const [otpRequestId, setOtpRequestId] = useState('');
-    const [isSendingOTP, setIsSendingOTP] = useState(false);
-    const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
-    const [ninError, setNinError] = useState('');
+    const [organization, setOrganization] = useState('');
+    const [organizationCode, setOrganizationCode] = useState('');
+    const [staffId, setStaffId] = useState('');
+    const [stateOfResidence, setStateOfResidence] = useState('');
+    const [lgaOfResidence, setLgaOfResidence] = useState('');
+    const [lgaOfResidenceOptions, setLgaOfResidenceOptions] = useState<{ value: string; label: string }[]>([]);
     const [apiError, setApiError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [registeredUserId, setRegisteredUserId] = useState('');
-    const requiresNIN = registrantType === 'youth_participant' || registrantType === 'corps_member';
+    const [registrationReference, setRegistrationReference] = useState('');
+    const isMinistryStaff = registrantType === 'ministry_of_youth';
+    const totalSteps = isMinistryStaff ? 2 : 5;
 
     const registrantTypeOptions = [
-        { value: 'youth_participant', label: 'Youth Participant' },
-        { value: 'corps_member', label: 'Corps Member' },
-        { value: 'guest', label: 'Guest' },
-        { value: 'ministry_of_youth', label: 'Ministry of Youth' },
+        { value: 'donor', label: 'Donor / Partner' },
+        { value: 'ngo', label: 'NGO' },
+        { value: 'other', label: 'Other' },
+        { value: 'ministry_of_youth', label: 'Ministry Staff' },
     ];
 
     const genderOptions = [
@@ -69,8 +67,11 @@ export default function RegisterPage() {
     const [otherEducation, setOtherEducation] = useState('');
     const [occupationStatus, setOccupationStatus] = useState('');
     const [otherOccupation, setOtherOccupation] = useState('');
-    const [skillsInterest, setSkillsInterest] = useState('');
+    const [skills, setSkills] = useState('');
+    const [areasOfInterest, setAreasOfInterest] = useState('');
     const [yearsExperience, setYearsExperience] = useState('');
+
+    const isOfficialGovernmentEmail = (value: string) => /^[^@\s]+@[^@\s]+\.gov\.ng$/i.test(value);
 
     // Set the program from URL parameter when component mounts
     useEffect(() => {
@@ -78,6 +79,10 @@ export default function RegisterPage() {
         const programParam = searchParams.get('program');
         if (programParam) {
             setProgramme(programParam);
+        }
+        if (searchParams.get('type') === 'staff') {
+            setRegistrantType('ministry_of_youth');
+            setIsDedicatedStaffSignup(true);
         }
     }, []);
 
@@ -106,139 +111,8 @@ export default function RegisterPage() {
         return selectedProgram ? selectedProgram.label : '';
     }, [programme, programmeOptions]);
 
-    // Handle state change and load corresponding LGAs
-    const handleStateChange = (selectedState: string) => {
-        setState(selectedState);
-        setLga('');
-
-        const stateInfo = statesData[selectedState as keyof typeof statesData];
-        let lgas: string[] = [];
-
-        if (Array.isArray(stateInfo)) {
-            lgas = stateInfo;
-        } else if (stateInfo && typeof stateInfo === 'object' && 'lgas' in stateInfo) {
-            lgas = stateInfo.lgas;
-        }
-
-        if (lgas.length > 0) {
-            setLgaOptions(lgas.map((lgaName: string) => ({ value: lgaName, label: lgaName })));
-        } else {
-            setLgaOptions([]);
-        }
-    };
-
-    // Handle NIN change
-    const handleNINChange = (value: string) => {
-        setNin(value);
-        const ninElem = document.getElementById('nin') as HTMLInputElement;
-        if (ninElem) {
-            ninElem.setCustomValidity('');
-        }
-        setIsNINVerified(false);
-        setOtpSent(false);
-        setOtpRequestId('');
-        setOtp('');
-        setNinError('');
-        setName('');
-        setDob('');
-        setGender('');
-        setPhoneNumber('');
-    };
-
     const handleRegistrantTypeChange = (value: string) => {
         setRegistrantType(value);
-        setNin('');
-        setIsNINVerified(false);
-        setOtpSent(false);
-        setOtpRequestId('');
-        setOtp('');
-        setNinError('');
-        setName('');
-        setDob('');
-        setGender('');
-        setPhoneNumber('');
-    };
-
-    const handleSendOTP = async () => {
-        if (!/^\d{11}$/.test(nin)) {
-            setNinError('Please enter a valid 11-digit NIN.');
-            return;
-        }
-
-        setNinError('');
-        setIsSendingOTP(true);
-        try {
-            const lookup = await postToApi<{
-                nin: string;
-                first_name: string;
-                last_name: string;
-                phone_number: string;
-            }>('/api/nin/lookup', { nin });
-
-            if (!lookup.first_name || !lookup.last_name || !lookup.phone_number) {
-                throw new Error('The identity service returned incomplete details. Please try again.');
-            }
-
-            const fullName = `${lookup.first_name} ${lookup.last_name}`.trim();
-            setName(fullName);
-            setPhoneNumber(lookup.phone_number);
-
-            const otpResponse = await postToApi<{ request_id: string; expires_at: string }>(
-                '/api/nin/otp',
-                { phone_number: lookup.phone_number }
-            );
-            if (!otpResponse.request_id) {
-                throw new Error('The identity service did not return an OTP request. Please try again.');
-            }
-
-            setOtpRequestId(otpResponse.request_id);
-            setOtp('');
-            setOtpSent(true);
-        } catch (error) {
-            setNinError(error instanceof Error ? error.message : 'Unable to send a verification code. Please try again.');
-        } finally {
-            setIsSendingOTP(false);
-        }
-    };
-
-    const handleVerifyOTP = async () => {
-        if (!/^\d{6}$/.test(otp)) {
-            setNinError('Enter the six-digit verification code.');
-            return;
-        }
-
-        if (!otpRequestId) {
-            setNinError('Request a new verification code before continuing.');
-            return;
-        }
-
-        setNinError('');
-        setIsVerifyingOTP(true);
-        try {
-            const verification = await postToApi<{
-                request_id: string;
-                phone_number: string;
-                verified_at: string;
-            }>('/api/nin/otp/verify', {
-                request_id: otpRequestId,
-                otp_code: otp,
-            });
-
-            if (!verification.verified_at || !verification.phone_number) {
-                throw new Error('The identity service could not confirm verification. Please try again.');
-            }
-
-            setPhoneNumber(verification.phone_number);
-            setIsNINVerified(true);
-            const ninElem = document.getElementById('nin') as HTMLInputElement;
-            if (ninElem) {
-                ninElem.setCustomValidity('');
-            }
-        } catch (error) {
-            setNinError(error instanceof Error ? error.message : 'Unable to verify the code. Please try again.');
-        } finally {
-            setIsVerifyingOTP(false);
-        }
     };
 
     // Handle password changes
@@ -268,11 +142,7 @@ export default function RegisterPage() {
         }
     };
 
-    // Handle state of origin change and load corresponding LGAs
-    const handleStateOfOriginChange = (selectedState: string) => {
-        setStateOfOrigin(selectedState);
-        setLgaOfOrigin('');
-
+    const getLgaOptionsForState = (selectedState: string) => {
         const stateInfo = statesData[selectedState as keyof typeof statesData];
         let lgas: string[] = [];
 
@@ -282,11 +152,19 @@ export default function RegisterPage() {
             lgas = stateInfo.lgas;
         }
 
-        if (lgas.length > 0) {
-            setLgaOfOriginOptions(lgas.map((lgaName: string) => ({ value: lgaName, label: lgaName })));
-        } else {
-            setLgaOfOriginOptions([]);
-        }
+        return lgas.map((lgaName: string) => ({ value: lgaName, label: lgaName }));
+    };
+
+    const handleStateOfOriginChange = (selectedState: string) => {
+        setStateOfOrigin(selectedState);
+        setLgaOfOrigin('');
+        setLgaOfOriginOptions(getLgaOptionsForState(selectedState));
+    };
+
+    const handleStateOfResidenceChange = (selectedState: string) => {
+        setStateOfResidence(selectedState);
+        setLgaOfResidence('');
+        setLgaOfResidenceOptions(getLgaOptionsForState(selectedState));
     };
 
     // Handle disability checkbox
@@ -315,46 +193,6 @@ export default function RegisterPage() {
         }
         setDisabilityStatus(updated);
     };
-
-    const organisationOptions = [
-        { value: 'NGO', label: 'NGO' },
-        { value: 'Government Agency', label: 'Government Agency' },
-        { value: 'Private Sector', label: 'Private Sector' },
-        { value: 'Educational Institution', label: 'Educational Institution' },
-        { value: 'Other', label: 'Other' },
-    ];
-
-    const governmentAgencyOptions = [
-        { value: 'FEDERAL MINISTRY OF YOUTH DEVELOPMENT', label: 'FEDERAL MINISTRY OF YOUTH DEVELOPMENT' },
-        { value: 'CITIZENSHIP AND LEADERSHIP TRAINING CENTRE', label: 'CITIZENSHIP AND LEADERSHIP TRAINING CENTRE' },
-        { value: 'FEDERAL MIN. OF WOMEN AFFAIRS AND SOCIAL DEVELOPMENT', label: 'FEDERAL MIN. OF WOMEN AFFAIRS AND SOCIAL DEVELOPMENT' },
-        { value: 'FEDERAL MINISTRY OF ENVIRONMENT', label: 'FEDERAL MINISTRY OF ENVIRONMENT' },
-        { value: 'FEDERAL MINISTRY OF EDUCATION', label: 'FEDERAL MINISTRY OF EDUCATION' },
-        { value: 'FEDERAL MINISTRY OF HUMANITARIAN AFFAIRS AND POVERTY REDUCTION', label: 'FEDERAL MINISTRY OF HUMANITARIAN AFFAIRS AND POVERTY REDUCTION' },
-        { value: 'FEDERAL MINISTRY OF LABOUR AND EMPLOYMENT', label: 'FEDERAL MINISTRY OF LABOUR AND EMPLOYMENT' },
-        { value: 'FEDERAL MINISTRY OF WATER RESOURCES AND SANITATION', label: 'FEDERAL MINISTRY OF WATER RESOURCES AND SANITATION' },
-        { value: 'FEDERAL MINISTRY OF INNOVATION, SCIENCE AND TECHNOLOGY', label: 'FEDERAL MINISTRY OF INNOVATION, SCIENCE AND TECHNOLOGY' },
-        { value: 'FEDERAL MINISTRY OF AGRICULTURE AND FOOD SECURITY', label: 'FEDERAL MINISTRY OF AGRICULTURE AND FOOD SECURITY' },
-        { value: 'NATIONAL INFORMATION, TECHNOLOGY DEVELOPMENT AGENCY (NITDA)', label: 'NATIONAL INFORMATION, TECHNOLOGY DEVELOPMENT AGENCY (NITDA)' },
-        { value: 'NATIONAL YOUTH SERVICE CORPS (NYSC)', label: 'NATIONAL YOUTH SERVICE CORPS (NYSC)' },
-        { value: 'NATIONAL DRUGS LAW ENFORCEMENT AGENCY (NDLEA)', label: 'NATIONAL DRUGS LAW ENFORCEMENT AGENCY (NDLEA)' },
-        { value: 'NIGERIAN DATA PROTECTION COMMISSION', label: 'NIGERIAN DATA PROTECTION COMMISSION' },
-        { value: 'NIGERIAN EDUCATION LOAN FUND (NELFUND)', label: 'NIGERIAN EDUCATION LOAN FUND (NELFUND)' },
-        { value: 'SMALL AND MEDIUM ENTERPRISES DEVELOPMENT AGENCY OF NIGERIA', label: 'SMALL AND MEDIUM ENTERPRISES DEVELOPMENT AGENCY OF NIGERIA' },
-        { value: 'FEDERAL MINISTRY OF INFORMATION AND NATIONAL ORIENTATION', label: 'FEDERAL MINISTRY OF INFORMATION AND NATIONAL ORIENTATION' },
-        { value: 'FEDERAL MINISTRY OF HEALTH AND SOCIAL WELFARE', label: 'FEDERAL MINISTRY OF HEALTH AND SOCIAL WELFARE' },
-        { value: 'FEDERAL MINISTRY OF COMMUNICATION, INNOVATION AND DIGITAL ECONOMY', label: 'FEDERAL MINISTRY OF COMMUNICATION, INNOVATION AND DIGITAL ECONOMY' },
-        { value: 'FEDERAL MINISTRY OF SCIENCE AND TECNOLOGY AND INNOVATION', label: 'FEDERAL MINISTRY OF SCIENCE AND TECNOLOGY AND INNOVATION' },
-        { value: 'FEDERAL MINISTRY OF BUGET AND ECONOMIC PLANNING', label: 'FEDERAL MINISTRY OF BUGET AND ECONOMIC PLANNING' },
-        { value: 'FEDERAL MINISTRY OF INDUSTRY, TRADE AND INVESTEMENT', label: 'FEDERAL MINISTRY OF INDUSTRY, TRADE AND INVESTEMENT' },
-        { value: 'NIGERIAN IMMIGRATION SERVICES', label: 'NIGERIAN IMMIGRATION SERVICES' },
-        { value: 'FEDERAL MINISTRY OF JUSTICE', label: 'FEDERAL MINISTRY OF JUSTICE' },
-        { value: 'NATIONAL SPORTS COMMISSION', label: 'NATIONAL SPORTS COMMISSION' },
-        { value: 'NATIONAL DIRECTORATE OF EMPLOYMENT (NDE)', label: 'NATIONAL DIRECTORATE OF EMPLOYMENT (NDE)' },
-        { value: 'NATIONAL BOARD FOR TECHNICAL EDUCATION (NBTE)', label: 'NATIONAL BOARD FOR TECHNICAL EDUCATION (NBTE)' },
-        { value: 'NATIONAL HUMAN RIGHTS COMMISSION (NHRC)', label: 'NATIONAL HUMAN RIGHTS COMMISSION (NHRC)' },
-        { value: 'NATIONAL POPULATION COMMISSION', label: 'NATIONAL POPULATION COMMISSION' },
-    ];
 
     const maritalStatusOptions = [
         { value: 'single', label: 'Single' },
@@ -390,12 +228,18 @@ export default function RegisterPage() {
         { value: 'other', label: 'Other' },
     ];
 
-    const steps = [
-        { number: 1, title: 'Personal Info', desc: 'Identity verification and personal details' },
-        { number: 2, title: 'Contact & Security', desc: 'Login credentials and residential address' },
-        { number: 3, title: 'Demographics', desc: 'Origin, marital status and accessibility' },
-        { number: 4, title: 'Education & Skills', desc: 'Qualifications, trade and experience' },
-    ];
+    const steps = isMinistryStaff
+        ? [
+            { number: 1, title: 'Staff Details', desc: 'Official and personal details' },
+            { number: 2, title: 'Review', desc: 'Check your information before submitting' },
+        ]
+        : [
+            { number: 1, title: 'Personal Info', desc: 'Personal details' },
+            { number: 2, title: 'Account', desc: 'Login credentials' },
+            { number: 3, title: 'Demographics', desc: 'Origin, zone and accessibility' },
+            { number: 4, title: 'Education & Skills', desc: 'Qualifications, skills and experience' },
+            { number: 5, title: 'Review', desc: 'Check your information before submitting' },
+        ];
 
     const handlePrev = () => {
         if (currentStep > 1) {
@@ -417,20 +261,20 @@ export default function RegisterPage() {
 
         // Step 1 cross-field validation
         if (currentStep === 1) {
-            if (requiresNIN && !isNINVerified) {
-                const ninElem = document.getElementById('nin') as HTMLInputElement;
-                if (ninElem) {
-                    ninElem.setCustomValidity('Please verify your 11-digit NIN with OTP before continuing');
-                    ninElem.reportValidity();
+            if (isMinistryStaff) {
+                if (!isOfficialGovernmentEmail(email)) {
+                    const emailElem = document.getElementById('email') as HTMLInputElement;
+                    emailElem?.setCustomValidity('Use your official government email address ending in .gov.ng.');
+                    emailElem?.reportValidity();
+                    return;
                 }
-                return;
             }
             setCurrentStep(2);
             return;
         }
 
         // Step 2 cross-field validation
-        if (currentStep === 2) {
+        if (currentStep === 2 && !isMinistryStaff) {
             if (password.length < 8) {
                 const passwordElem = document.getElementById('password') as HTMLInputElement;
                 if (passwordElem) {
@@ -447,12 +291,14 @@ export default function RegisterPage() {
                 }
                 return;
             }
+            const emailElem = document.getElementById('email') as HTMLInputElement;
+            emailElem?.setCustomValidity('');
             setCurrentStep(3);
             return;
         }
 
         // Step 3 cross-field validation
-        if (currentStep === 3) {
+        if (currentStep === 3 && !isMinistryStaff) {
             if (disabilityStatus.length === 0) {
                 const firstBox = document.getElementById('disability-none') as HTMLInputElement;
                 if (firstBox) {
@@ -465,38 +311,85 @@ export default function RegisterPage() {
             return;
         }
 
+        if (currentStep === 4 && !isMinistryStaff) {
+            setCurrentStep(5);
+            return;
+        }
+
         setIsSubmitting(true);
         try {
+            if (isMinistryStaff) {
+                const staffRegistration = await postToApi<{
+                    id: string;
+                    official_email: string;
+                    urep_code: string;
+                }>('/api/auth/staff/register', {
+                    official_email: email,
+                    full_name: name,
+                    phone_number: phoneNumber,
+                    gender,
+                    staff_id: staffId,
+                });
+
+                if (!staffRegistration.id) {
+                    throw new Error('The registration service did not return a staff ID. Please try again.');
+                }
+                if (!/^[a-zA-Z0-9]{8}$/.test(staffRegistration.urep_code)) {
+                    throw new Error('The registration service returned an invalid reference code. Please contact support.');
+                }
+
+                try {
+                    sessionStorage.setItem(REGISTRATION_REFERENCE_KEY, staffRegistration.urep_code);
+                } catch {
+                    throw new Error('Your staff record was created, but browser storage is blocked. Enable storage and retry.');
+                }
+
+                router.push('/success');
+                return;
+            }
+
             const requestedProgramme = new URLSearchParams(window.location.search).get('program');
             const selectedProgramme = programmeOptions.find((option) => option.value === requestedProgramme)?.value
                 || programme;
             let userId = registeredUserId;
+            let referenceCode = registrationReference;
             if (!userId) {
-                const registration = await postToApi<{ id: string; email: string }>('/api/auth/register', {
+                const registration = await postToApi<{
+                    id: string;
+                    email: string;
+                    urep_code: string;
+                }>('/api/auth/register', {
                     full_name: name,
                     email,
                     password,
                     registrant_type: registrantType,
                     selected_program: selectedProgramme || 'general',
-                    organization: organisation,
-                    date_of_birth: dob,
+                    organization,
+                    organization_code: organizationCode,
                     phone_number: phoneNumber,
                     gender,
-                    state_of_residence: state,
-                    lga_of_residence: lga,
-                    ...(organisation === 'Government Agency' ? { government_agency: governmentAgency } : {}),
+                    state_of_residence: stateOfResidence,
+                    lga_of_residence: lgaOfResidence,
                 });
 
                 if (!registration.id) {
                     throw new Error('The registration service did not return a user ID. Please try again.');
                 }
+                if (!/^[a-zA-Z0-9]{8}$/.test(registration.urep_code)) {
+                    throw new Error('The registration service returned an invalid reference code. Please contact support.');
+                }
 
                 userId = registration.id;
+                referenceCode = registration.urep_code;
                 setRegisteredUserId(userId);
+                setRegistrationReference(referenceCode);
             }
 
             try {
                 sessionStorage.setItem(REGISTERED_USER_ID_KEY, userId);
+                if (referenceCode) {
+                    sessionStorage.setItem(REGISTRATION_REFERENCE_KEY, referenceCode);
+                }
             } catch {
                 throw new Error('Your account was created, but browser storage is blocked. Enable storage and retry.');
             }
@@ -510,11 +403,12 @@ export default function RegisterPage() {
                     .join(', '),
                 education_level: educationLevel === 'other' ? otherEducation : educationLevel,
                 occupation_status: occupationStatus === 'other' ? otherOccupation : occupationStatus,
-                skills: skillsInterest,
+                skills,
+                area_of_interest: areasOfInterest,
                 years_of_experience: yearsExperience,
             });
 
-            router.push(selectedProgramme ? `/programs/${selectedProgramme}` : '/');
+            router.push(isMinistryStaff ? '/dashboard' : selectedProgramme ? `/programs/${selectedProgramme}` : '/');
         } catch (error) {
             setApiError(error instanceof Error ? error.message : 'Unable to complete registration. Please try again.');
         } finally {
@@ -547,8 +441,17 @@ export default function RegisterPage() {
             <main className="w-full max-w-2xl mx-auto px-4 sm:px-6 my-auto pt-16 sm:pt-4">
                 {/* Heading */}
                 <div className="text-center mb-3">
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Create your account</h1>
-                    <p className="text-xs text-gray-500 mt-0.5">Join the Unified Registration Portal in 4 quick steps</p>
+                    {programme === 'national_youth' && (
+                        <div className="mb-3 rounded-lg bg-[#277B12] px-4 py-3 text-sm font-bold uppercase tracking-wide text-white">
+                            National Validation and Adoption Workshop of the National Youth Policy
+                        </div>
+                    )}
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+                        {isMinistryStaff ? 'Ministry Staff Sign Up' : 'Create your account'}
+                    </h1>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        {isMinistryStaff ? 'Create a staff account with your official government email' : `Join the Unified Registration Portal in ${totalSteps} steps`}
+                    </p>
                 </div>
 
                 {/* Progressive Stepper */}
@@ -613,163 +516,50 @@ export default function RegisterPage() {
                     {/* ── STEP 1: Personal Information ── */}
                     {currentStep === 1 && (
                         <div className="space-y-3 animate-in fade-in duration-200">
-                            <TextField
-                                type="dropdown"
-                                label="Registrant Type"
-                                placeholder="Select your registration type"
-                                value={registrantType}
-                                onChange={handleRegistrantTypeChange}
-                                options={registrantTypeOptions}
-                                disabled={isSendingOTP || isVerifyingOTP}
-                                required
-                                id="registrantType"
-                            />
+                            {isDedicatedStaffSignup ? (
+                                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700">
+                                    Registrant Type: Ministry Staff
+                                </div>
+                            ) : (
+                                <TextField
+                                    type="dropdown"
+                                    label="Participant Type"
+                                    placeholder="Select donor, NGO or other"
+                                    value={registrantType}
+                                    onChange={handleRegistrantTypeChange}
+                                    options={registrantTypeOptions.filter((option) => option.value !== 'ministry_of_youth')}
+                                    required
+                                    id="registrantType"
+                                />
+                            )}
 
                             {/* Selected Programme */}
-                            <div className="flex flex-col gap-1 mb-1">
+                            {!isMinistryStaff && <div className="flex flex-col gap-1 mb-1">
                                 <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                                     Selected Programme <span className="text-red-500">*</span>
                                 </label>
                                 <div className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-medium">
                                     {selectedProgramName || 'General Youth Registration (Default)'}
                                 </div>
-                            </div>
+                            </div>}
 
-                            {/* Organisation & Optional Government Agency */}
-                            <div className={`grid grid-cols-1 ${organisation === 'Government Agency' ? 'sm:grid-cols-2' : ''} gap-x-4`}>
-                                <TextField
-                                    type="dropdown"
-                                    label="Organisation"
-                                    placeholder="Which organisation are you from?"
-                                    value={organisation}
-                                    onChange={(val) => {
-                                        setOrganisation(val);
-                                        if (val !== 'Government Agency') setGovernmentAgency('');
-                                    }}
-                                    options={organisationOptions}
-                                    required
-                                    id="organisation"
-                                />
-                                {organisation === 'Government Agency' && (
-                                    <TextField
-                                        type="dropdown"
-                                        label="Government Agency"
-                                        placeholder="Select Agency"
-                                        value={governmentAgency}
-                                        onChange={setGovernmentAgency}
-                                        options={governmentAgencyOptions}
-                                        required
-                                        id="governmentAgency"
-                                    />
-                                )}
-                            </div>
-
-                            {requiresNIN && (
-                                <>
-                                    {/* NIN Input & Verification */}
-                                    <div className="flex flex-col gap-1">
-                                        <label htmlFor="nin" className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                                            National Identity Number (NIN) <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                id="nin"
-                                                value={nin}
-                                                onChange={(e) => handleNINChange(e.target.value)}
-                                                placeholder="Enter your 11-digit NIN"
-                                                inputMode="numeric"
-                                                pattern="[0-9]{11}"
-                                                className={`flex-1 px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#277B12] focus:border-[#277B12] placeholder:text-gray-400 ${isNINVerified ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'
-                                                    }`}
-                                                required
-                                                maxLength={11}
-                                                disabled={isNINVerified || isSendingOTP || isVerifyingOTP}
-                                            />
-                                            {!isNINVerified && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleSendOTP}
-                                                    disabled={isSendingOTP || isVerifyingOTP}
-                                                    className="whitespace-nowrap rounded-lg bg-[#277B12] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1b5c0d] disabled:cursor-wait disabled:opacity-60"
-                                                >
-                                                    {isSendingOTP ? 'Sending...' : otpSent ? 'Resend code' : 'Send code'}
-                                                </button>
-                                            )}
-                                        </div>
-                                        {isNINVerified && (
-                                            <p className="text-xs text-green-600 font-semibold mt-1">✓ NIN verified successfully</p>
-                                        )}
-                                    </div>
-
-                                    {/* OTP info & field */}
-                                    {otpSent && !isNINVerified && (
-                                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
-                                            <p className="text-xs text-green-800">
-                                                A verification code was sent to {phoneNumber}.
-                                            </p>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    id="otpInput"
-                                                    value={otp}
-                                                    onChange={(e) => {
-                                                        setOtp(e.target.value);
-                                                        e.target.setCustomValidity('');
-                                                    }}
-                                                    placeholder="Enter 6-digit OTP"
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]{6}"
-                                                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#277B12] bg-white"
-                                                    maxLength={6}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={handleVerifyOTP}
-                                                    disabled={isVerifyingOTP}
-                                                    className="rounded-lg bg-[#277B12] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1b5c0d] disabled:cursor-wait disabled:opacity-60"
-                                                >
-                                                    {isVerifyingOTP ? 'Verifying...' : 'Verify code'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {ninError && (
-                                        <p role="alert" className="text-xs text-red-600">
-                                            {ninError}
-                                        </p>
-                                    )}
-                                </>
-                            )}
-
-                            {/* Auto-filled NIN details */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 pt-1">
                                 <TextField
                                     type="text"
                                     label="Full Name"
-                                    placeholder={requiresNIN ? "Auto-filled via NIN" : "Enter your full name"}
+                                    placeholder="Enter your full name"
                                     value={name}
                                     onChange={setName}
                                     id="name"
-                                    readOnly={requiresNIN}
-                                    required
-                                />
-                                <TextField
-                                    type="date"
-                                    label="Date of Birth"
-                                    value={dob}
-                                    onChange={setDob}
-                                    id="dob"
                                     required
                                 />
                                 <TextField
                                     type="text"
                                     label="Phone Number"
-                                    placeholder={requiresNIN ? "Auto-filled via NIN" : "Enter your phone number"}
+                                    placeholder="Enter your phone number"
                                     value={phoneNumber}
                                     onChange={setPhoneNumber}
                                     id="phoneNumber"
-                                    readOnly={requiresNIN}
                                     required
                                 />
                                 <TextField
@@ -782,19 +572,92 @@ export default function RegisterPage() {
                                     id="gender"
                                     required
                                 />
+                                {isMinistryStaff && (
+                                    <>
+                                        <TextField
+                                            type="email"
+                                            label="Official Government Email"
+                                            placeholder="name@agency.gov.ng"
+                                            value={email}
+                                            onChange={(value) => {
+                                                setEmail(value);
+                                                (document.getElementById('email') as HTMLInputElement | null)?.setCustomValidity('');
+                                            }}
+                                            required
+                                            id="email"
+                                            hint="Staff accounts require an official .gov.ng email address."
+                                        />
+                                        <TextField
+                                            type="text"
+                                            label="Staff ID"
+                                            placeholder="Enter your staff ID"
+                                            value={staffId}
+                                            onChange={setStaffId}
+                                            required
+                                            id="staffId"
+                                        />
+                                    </>
+                                )}
                             </div>
+                            {!isMinistryStaff && (
+                                <>
+                                    <TextField
+                                        type="text"
+                                        label="Organization"
+                                        placeholder="Enter your organization"
+                                        value={organization}
+                                        onChange={setOrganization}
+                                        required
+                                        id="organization"
+                                    />
+                                    <TextField
+                                        type="text"
+                                        label="Organization Code"
+                                        placeholder="Enter your organization code"
+                                        value={organizationCode}
+                                        onChange={setOrganizationCode}
+                                        required
+                                        id="organizationCode"
+                                    />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                                        <TextField
+                                            type="dropdown"
+                                            label="State of Residence"
+                                            placeholder="Select State"
+                                            value={stateOfResidence}
+                                            onChange={handleStateOfResidenceChange}
+                                            options={stateOptions}
+                                            required
+                                            id="stateOfResidence"
+                                        />
+                                        <TextField
+                                            type="dropdown"
+                                            label="LGA of Residence"
+                                            placeholder="Select LGA"
+                                            value={lgaOfResidence}
+                                            onChange={setLgaOfResidence}
+                                            options={lgaOfResidenceOptions}
+                                            required
+                                            id="lgaOfResidence"
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
 
-                    {/* ── STEP 2: Contact & Security ── */}
-                    {currentStep === 2 && (
+                    {/* ── STEP 2: Account Details ── */}
+                    {currentStep === 2 && !isMinistryStaff && (
                         <div className="space-y-3 animate-in fade-in duration-200">
                             <TextField
                                 type="email"
                                 label="Email Address"
                                 placeholder="you@example.com"
                                 value={email}
-                                onChange={setEmail}
+                                onChange={(value) => {
+                                    setEmail(value);
+                                    (document.getElementById('email') as HTMLInputElement | null)?.setCustomValidity('');
+                                }}
                                 required
                                 id="email"
                             />
@@ -820,33 +683,11 @@ export default function RegisterPage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                                <TextField
-                                    type="dropdown"
-                                    label="State of Residence"
-                                    placeholder="Select State"
-                                    value={state}
-                                    onChange={handleStateChange}
-                                    options={stateOptions}
-                                    required
-                                    id="state"
-                                />
-                                <TextField
-                                    type="dropdown"
-                                    label="LGA of Residence"
-                                    placeholder="Select LGA"
-                                    value={lga}
-                                    onChange={setLga}
-                                    options={lgaOptions}
-                                    required
-                                    id="lga"
-                                />
-                            </div>
                         </div>
                     )}
 
                     {/* ── STEP 3: Demographics ── */}
-                    {currentStep === 3 && (
+                    {currentStep === 3 && !isMinistryStaff && (
                         <div className="space-y-3 animate-in fade-in duration-200">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                                 <TextField
@@ -969,29 +810,92 @@ export default function RegisterPage() {
                             </div>
 
                             <div className="flex flex-col gap-1">
-                                <label htmlFor="skillsInterest" className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                                    Skills / Areas of Interest <span className="text-red-500">*</span>
+                                <label htmlFor="skills" className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Skills <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
-                                    id="skillsInterest"
-                                    value={skillsInterest}
-                                    onChange={(e) => setSkillsInterest(e.target.value)}
-                                    placeholder="Describe your skills, vocations, and areas of interest..."
+                                    id="skills"
+                                    value={skills}
+                                    onChange={(e) => setSkills(e.target.value)}
+                                    placeholder="Describe your skills..."
                                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#277B12] focus:border-[#277B12] placeholder:text-gray-400 min-h-16 h-16 resize-none bg-white"
                                     required
                                 />
                             </div>
 
-                            <TextField
-                                type="text"
-                                label="Years of Experience"
-                                placeholder="e.g. 3 years"
-                                value={yearsExperience}
-                                onChange={setYearsExperience}
-                                id="yearsExperience"
-                                required
-                            />
+                            <div className="flex flex-col gap-1">
+                                <label htmlFor="areasOfInterest" className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    Areas of Interest <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    id="areasOfInterest"
+                                    value={areasOfInterest}
+                                    onChange={(e) => setAreasOfInterest(e.target.value)}
+                                    placeholder="Describe your areas of interest..."
+                                    className="w-full min-h-16 resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-[#277B12] focus:outline-none focus:ring-1 focus:ring-[#277B12]"
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1 mb-2.5">
+                                <label htmlFor="yearsExperience" className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                    Years of Experience <span className="ml-1 text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="yearsExperience"
+                                    inputMode="numeric"
+                                    pattern="[0-9]{1,2}"
+                                    maxLength={2}
+                                    value={yearsExperience}
+                                    onChange={(event) => {
+                                        const value = event.target.value;
+                                        if (/^\d{0,2}$/.test(value)) setYearsExperience(value);
+                                    }}
+                                    placeholder="e.g. 3"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm placeholder:text-gray-400 focus:border-[#277B12] focus:outline-none focus:ring-1 focus:ring-[#277B12]"
+                                    required
+                                />
+                            </div>
                         </div>
+                    )}
+
+                    {currentStep === totalSteps && (
+                        <section aria-labelledby="review-heading" className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <div>
+                                <h3 id="review-heading" className="font-semibold text-gray-900">Review your information</h3>
+                                <p className="text-sm text-gray-500">Confirm these details before submitting.</p>
+                            </div>
+                            <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                                <div><dt className="font-medium text-gray-500">{isMinistryStaff ? 'Registrant type' : 'Participant type'}</dt><dd className="text-gray-900">{registrantTypeOptions.find((option) => option.value === registrantType)?.label || '—'}</dd></div>
+                                <div><dt className="font-medium text-gray-500">Full name</dt><dd className="text-gray-900">{name || '—'}</dd></div>
+                                <div><dt className="font-medium text-gray-500">{isMinistryStaff ? 'Official email' : 'Email'}</dt><dd className="text-gray-900">{email || '—'}</dd></div>
+                                <div><dt className="font-medium text-gray-500">Phone number</dt><dd className="text-gray-900">{phoneNumber || '—'}</dd></div>
+                                {!isMinistryStaff && <div><dt className="font-medium text-gray-500">Programme</dt><dd className="text-gray-900">{selectedProgramName || 'General Youth Registration'}</dd></div>}
+                                {isMinistryStaff ? (
+                                    <>
+                                        <div><dt className="font-medium text-gray-500">Gender</dt><dd className="text-gray-900">{gender || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Staff ID</dt><dd className="text-gray-900">{staffId || '—'}</dd></div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div><dt className="font-medium text-gray-500">Gender</dt><dd className="text-gray-900">{gender || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Organization</dt><dd className="text-gray-900">{organization || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Organization code</dt><dd className="text-gray-900">{organizationCode || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">State of residence</dt><dd className="text-gray-900">{stateOfResidence || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">LGA of residence</dt><dd className="text-gray-900">{lgaOfResidence || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">State of origin</dt><dd className="text-gray-900">{stateOfOrigin || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">LGA of origin</dt><dd className="text-gray-900">{lgaOfOrigin || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Marital status</dt><dd className="text-gray-900">{maritalStatus || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Education level</dt><dd className="text-gray-900">{educationLevel === 'other' ? otherEducation : educationLevel || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Occupation</dt><dd className="text-gray-900">{occupationStatus === 'other' ? otherOccupation : occupationStatus || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Skills</dt><dd className="text-gray-900">{skills || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Areas of interest</dt><dd className="text-gray-900">{areasOfInterest || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Years of experience</dt><dd className="text-gray-900">{yearsExperience || '—'}</dd></div>
+                                    </>
+                                )}
+                            </dl>
+                        </section>
                     )}
 
                     {/* Progressive Stepper Controls */}
@@ -1008,8 +912,8 @@ export default function RegisterPage() {
                         <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
                             <span className="text-xs text-gray-500">
                                 Already have an account?{' '}
-                                <Link href="/login" className="text-[#277B12] hover:underline font-semibold">
-                                    Login
+                                <Link href={isMinistryStaff ? '/login?type=staff' : '/login'} className="text-[#277B12] hover:underline font-semibold">
+                                {isMinistryStaff ? 'Staff Login' : 'Login'}
                                 </Link>
                             </span>
 
