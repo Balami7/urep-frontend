@@ -132,14 +132,6 @@ export default function LoginPage() {
                         >
                             {isStaffLogin ? 'Participant sign in' : 'Staff sign in'}
                         </Link>
-                        {!isStaffLogin && (
-                            <>
-                                {' · '}
-                                <Link href="/register?type=staff" className="text-[#277B12] hover:underline font-semibold">
-                                    Staff sign up
-                                </Link>
-                            </>
-                        )}
                     </p>
                 </div>
             </div>
