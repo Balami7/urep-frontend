@@ -21,6 +21,8 @@ export default function NationalYouthPage() {
     }
 
     const [stakeholder, setStakeholder] = useState('');
+    const [areaOfExpertise, setAreaOfExpertise] = useState('');
+    const [otherExpertise, setOtherExpertise] = useState('');
     const [expectation, setExpectation] = useState('');
     const [application, setApplication] = useState('');
     const [previousEngagement, setPreviousEngagement] = useState('');
@@ -77,6 +79,16 @@ export default function NationalYouthPage() {
         { value: 'no', label: 'No' },
     ];
 
+    const expertiseOptions = [
+        { value: 'policy_formulation', label: 'Policy Formulation' },
+        { value: 'programme_project_design', label: 'Programme/Project Design' },
+        { value: 'resource_mobilisation', label: 'Resource Mobilisation' },
+        { value: 'monitoring_evaluation', label: 'Monitoring & Evaluation' },
+        { value: 'youth_mobilisation', label: 'Youth Mobilisation' },
+        { value: 'systems_design_strengthening', label: 'Systems Design & Strengthening' },
+        { value: 'other', label: 'Other' },
+    ];
+
     const urgentPriorityOptions = [
         {value: 'employment_and_job_creation', label: 'Employment and Job Creation'},
         {value: 'education', label: 'Education'},
@@ -99,7 +111,9 @@ export default function NationalYouthPage() {
             }
 
             const draft: NationalYouthDraft = {
-                stakeholder,
+                stakeholder: stakeholder === 'yes'
+                    ? `Yes; Area of Expertise: ${areaOfExpertise === 'other' ? otherExpertise : expertiseOptions.find((option) => option.value === areaOfExpertise)?.label ?? areaOfExpertise}`
+                    : 'No',
                 reason,
                 expectation,
                 organization: getRegistrationContext().organization,
@@ -132,14 +146,45 @@ export default function NationalYouthPage() {
                 <section>
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2">
                     <TextField
-                        type="text"
-                        label="Are you a youth development stakeholder? If yes, what is your area of expertise?"
-                        placeholder="Yes, please specify your area of expertise"
+                        type="dropdown"
+                        label="Are you a youth development stakeholder?"
+                        placeholder="Select an option"
                         value={stakeholder}
-                        onChange={setStakeholder}
+                        onChange={(value) => {
+                            setStakeholder(value);
+                            setAreaOfExpertise('');
+                            setOtherExpertise('');
+                        }}
+                        options={previousEngagementOptions}
                         required
                         id="stakeholder"
                     />
+
+                    {stakeholder === 'yes' && (
+                        <>
+                            <TextField
+                                type="dropdown"
+                                label="Your Area of Expertise"
+                                placeholder="Select an option"
+                                value={areaOfExpertise}
+                                onChange={setAreaOfExpertise}
+                                options={expertiseOptions}
+                                required
+                                id="area_of_expertise"
+                            />
+                            {areaOfExpertise === 'other' && (
+                                <TextField
+                                    type="text"
+                                    label="Please specify your area of expertise"
+                                    placeholder="Enter your area of expertise"
+                                    value={otherExpertise}
+                                    onChange={setOtherExpertise}
+                                    required
+                                    id="other_expertise"
+                                />
+                            )}
+                        </>
+                    )}
 
                     <TextField
                         type="text"
