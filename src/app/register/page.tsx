@@ -11,6 +11,7 @@ import {
     postToApi,
     REGISTERED_USER_ID_KEY,
     REGISTRATION_REFERENCE_KEY,
+    REGISTRATION_CONTEXT_KEY,
 } from "@/lib/urep-api";
 
 export default function RegisterPage() {
@@ -19,7 +20,6 @@ export default function RegisterPage() {
     const [currentStep, setCurrentStep] = useState(1);
 
     const [registrantType, setRegistrantType] = useState('');
-    const [isDedicatedStaffSignup, setIsDedicatedStaffSignup] = useState(false);
     const [programme, setProgramme] = useState('');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -39,13 +39,20 @@ export default function RegisterPage() {
     const [registeredUserId, setRegisteredUserId] = useState('');
     const [registrationReference, setRegistrationReference] = useState('');
     const isMinistryStaff = registrantType === 'ministry_of_youth';
+    const requiresNin = registrantType === 'youth_participant' || registrantType === 'corps_member';
     const totalSteps = isMinistryStaff ? 2 : 5;
+    const [nin, setNin] = useState('');
+    const [otpCode, setOtpCode] = useState('');
+    const [otpRequestId, setOtpRequestId] = useState('');
+    const [isNinVerified, setIsNinVerified] = useState(false);
+    const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
     const registrantTypeOptions = [
-        { value: 'donor', label: 'Donor / Partner' },
-        { value: 'ngo', label: 'NGO' },
-        { value: 'other', label: 'Other' },
-        { value: 'ministry_of_youth', label: 'Ministry Staff' },
+        { value: 'youth_participant', label: 'Youth Participant' },
+        { value: 'corps_member', label: 'Corps Member' },
+        { value: 'guest', label: 'Guest' },
+        { value: 'ministry_of_youth', label: 'Staff' },
     ];
 
     const genderOptions = [
@@ -82,7 +89,6 @@ export default function RegisterPage() {
         }
         if (searchParams.get('type') === 'staff') {
             setRegistrantType('ministry_of_youth');
-            setIsDedicatedStaffSignup(true);
         }
     }, []);
 
@@ -113,6 +119,61 @@ export default function RegisterPage() {
 
     const handleRegistrantTypeChange = (value: string) => {
         setRegistrantType(value);
+        setNin('');
+        setOtpCode('');
+        setOtpRequestId('');
+        setIsNinVerified(false);
+    };
+
+    const handleSendNinOtp = async () => {
+        if (!/^\d{11}$/.test(nin)) {
+            setApiError('Enter a valid 11-digit NIN.');
+            return;
+        }
+
+        setApiError('');
+        setIsSendingOtp(true);
+        try {
+            const lookup = await postToApi<{
+                nin: string;
+                first_name: string;
+                last_name: string;
+                phone_number: string;
+            }>('/api/nin/lookup', { nin });
+
+            const otp = await postToApi<{ request_id: string; expires_at: string }>('/api/nin/otp', {
+                phone_number: lookup.phone_number,
+            });
+
+            setName(`${lookup.first_name} ${lookup.last_name}`.trim());
+            setPhoneNumber(lookup.phone_number);
+            setOtpRequestId(otp.request_id);
+        } catch (error) {
+            setApiError(error instanceof Error ? error.message : 'Unable to verify NIN.');
+        } finally {
+            setIsSendingOtp(false);
+        }
+    };
+
+    const handleVerifyNinOtp = async () => {
+        if (!/^\d{6}$/.test(otpCode) || !otpRequestId) {
+            setApiError('Enter the 6-digit OTP.');
+            return;
+        }
+
+        setApiError('');
+        setIsVerifyingOtp(true);
+        try {
+            await postToApi<{ request_id: string; phone_number: string; verified_at: string }>(
+                '/api/nin/otp/verify',
+                { request_id: otpRequestId, otp_code: otpCode },
+            );
+            setIsNinVerified(true);
+        } catch (error) {
+            setApiError(error instanceof Error ? error.message : 'Unable to verify the OTP.');
+        } finally {
+            setIsVerifyingOtp(false);
+        }
     };
 
     // Handle password changes
@@ -261,6 +322,10 @@ export default function RegisterPage() {
 
         // Step 1 cross-field validation
         if (currentStep === 1) {
+            if (requiresNin && !isNinVerified) {
+                setApiError('Complete NIN lookup and OTP verification before continuing.');
+                return;
+            }
             if (isMinistryStaff) {
                 if (!isOfficialGovernmentEmail(email)) {
                     const emailElem = document.getElementById('email') as HTMLInputElement;
@@ -390,6 +455,10 @@ export default function RegisterPage() {
                 if (referenceCode) {
                     sessionStorage.setItem(REGISTRATION_REFERENCE_KEY, referenceCode);
                 }
+                sessionStorage.setItem(REGISTRATION_CONTEXT_KEY, JSON.stringify({
+                    organization,
+                    state_of_residence: stateOfResidence,
+                }));
             } catch {
                 throw new Error('Your account was created, but browser storage is blocked. Enable storage and retry.');
             }
@@ -441,11 +510,6 @@ export default function RegisterPage() {
             <main className="w-full max-w-2xl mx-auto px-4 sm:px-6 my-auto pt-16 sm:pt-4">
                 {/* Heading */}
                 <div className="text-center mb-3">
-                    {programme === 'national_youth' && (
-                        <div className="mb-3 rounded-lg bg-[#277B12] px-4 py-3 text-sm font-bold uppercase tracking-wide text-white">
-                            National Validation and Adoption Workshop of the National Youth Policy
-                        </div>
-                    )}
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
                         {isMinistryStaff ? 'Ministry Staff Sign Up' : 'Create your account'}
                     </h1>
@@ -516,21 +580,66 @@ export default function RegisterPage() {
                     {/* ── STEP 1: Personal Information ── */}
                     {currentStep === 1 && (
                         <div className="space-y-3 animate-in fade-in duration-200">
-                            {isDedicatedStaffSignup ? (
-                                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700">
-                                    Registrant Type: Ministry Staff
+                            <TextField
+                                type="dropdown"
+                                label="Registration Type"
+                                placeholder="Select registration type"
+                                value={registrantType}
+                                onChange={handleRegistrantTypeChange}
+                                options={registrantTypeOptions}
+                                required
+                                id="registrantType"
+                            />
+
+                            {requiresNin && (
+                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+                                    <TextField
+                                        type="text"
+                                        label="National Identity Number (NIN)"
+                                        placeholder="Enter 11-digit NIN"
+                                        value={nin}
+                                        onChange={(value) => {
+                                            setNin(value.replace(/\D/g, '').slice(0, 11));
+                                            setIsNinVerified(false);
+                                            setOtpRequestId('');
+                                            setOtpCode('');
+                                        }}
+                                        required
+                                        id="nin"
+                                        disabled={isNinVerified}
+                                    />
+                                    {!otpRequestId ? (
+                                        <button
+                                            type="button"
+                                            onClick={handleSendNinOtp}
+                                            disabled={isSendingOtp}
+                                            className="rounded-lg bg-[#277B12] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {isSendingOtp ? 'Sending OTP...' : 'Lookup NIN and Send OTP'}
+                                        </button>
+                                    ) : (
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <TextField
+                                                type="text"
+                                                label="OTP Code"
+                                                placeholder="Enter 6-digit OTP"
+                                                value={otpCode}
+                                                onChange={(value) => setOtpCode(value.replace(/\D/g, '').slice(0, 6))}
+                                                required
+                                                id="otpCode"
+                                                disabled={isNinVerified}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleVerifyNinOtp}
+                                                disabled={isVerifyingOtp || isNinVerified}
+                                                className="self-end mb-1 rounded-lg bg-[#277B12] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                {isNinVerified ? 'Verified' : isVerifyingOtp ? 'Verifying...' : 'Verify OTP'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <TextField
-                                    type="dropdown"
-                                    label="Participant Type"
-                                    placeholder="Select donor, NGO or other"
-                                    value={registrantType}
-                                    onChange={handleRegistrantTypeChange}
-                                    options={registrantTypeOptions.filter((option) => option.value !== 'ministry_of_youth')}
-                                    required
-                                    id="registrantType"
-                                />
                             )}
 
                             {/* Selected Programme */}
@@ -552,6 +661,7 @@ export default function RegisterPage() {
                                     onChange={setName}
                                     id="name"
                                     required
+                                    readOnly={requiresNin}
                                 />
                                 <TextField
                                     type="text"
@@ -561,6 +671,7 @@ export default function RegisterPage() {
                                     onChange={setPhoneNumber}
                                     id="phoneNumber"
                                     required
+                                    readOnly={requiresNin}
                                 />
                                 <TextField
                                     type="dropdown"

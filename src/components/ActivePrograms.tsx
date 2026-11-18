@@ -150,7 +150,9 @@ export function ActivePrograms() {
             <div className="flex flex-col justify-between bg-gradient-to-b from-[#277B12] to-[#F9E79F] rounded-2xl shadow-xl p-6 sm:p-8 min-h-[540px] overflow-hidden">
               {/* Program Header */}
               <div className="text-center mb-4">
-                <h3 className="font-bold text-xl sm:text-2xl text-black tracking-tight leading-snug">
+                <h3 className={`font-bold text-xl sm:text-2xl tracking-tight leading-snug ${
+                  currentProgram.id === "national_youth" ? "text-white" : "text-black"
+                }`}>
                   {currentProgram.title}
                 </h3>
               </div>

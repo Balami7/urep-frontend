@@ -7,6 +7,7 @@ import {
     NATIONAL_YOUTH_DRAFT_KEY,
     NationalYouthDraft,
     REGISTERED_USER_ID_KEY,
+    REGISTRATION_CONTEXT_KEY,
 } from "@/lib/urep-api";
 
 export default function NationalYouthPage() {
@@ -20,33 +21,48 @@ export default function NationalYouthPage() {
     }
 
     const [stakeholder, setStakeholder] = useState('');
-    const [organization, setOrganization] = useState('');
     const [expectation, setExpectation] = useState('');
     const [application, setApplication] = useState('');
     const [previousEngagement, setPreviousEngagement] = useState('');
     const [benefitedFromFMYD, setBenefitedFromFMYD] = useState('');
-    const [geopoliticalZone, setGeopoliticalZone] = useState('');
     const [reason, setReason] = useState('');
-    const [youthFocusedOrganization, setYouthFocusedOrganization] = useState('');
     const [urgentPriority, setUrgentPriority] = useState('');
     const [submitError, setSubmitError] = useState('');
 
-    const embassyOptions = [
-        { value: 'line_ministries', label: 'Federal line Ministries, Departments and Agencies' },
-        { value: 'state_ministry_of_youth_development', label: 'State Ministry of Youth Development' },
-        { value: 'development_partnership', label: 'Development Partnership' },
-        { value: 'youth_policy_coalition', label: 'Youth Policy Coalition' },
-        { value: 'youth_ngo', label: 'Youth NGO' },
-        { value: 'youth_cso', label: 'Youth CSO' },
-        { value: 'national_assembly', label: 'National Assembly' },
-        { value: 'un_system_donor', label: 'UN System or Donor' },
-        { value: 'vulnerable_youth_group', label: 'Vulnerable Youth Group' },
-        {value: 'Private_Sector', label: 'Private Sector'},
-        {value: 'academic_institution', label: 'Academic Institution'},
-        {value: 'research_institution', label: 'Research Institution'},
-        {value: 'media_house', label: 'Media House'},
-        {value: 'others', label: 'Others'},
-    ];
+    const getRegistrationContext = () => {
+        try {
+            const storedContext = sessionStorage.getItem(REGISTRATION_CONTEXT_KEY);
+            if (!storedContext) return { organization: '', geopoliticalZone: '' };
+
+            const context = JSON.parse(storedContext) as {
+                organization?: string;
+                state_of_residence?: string;
+            };
+            const state = context.state_of_residence ?? '';
+
+            const northCentral = ['Benue', 'Kogi', 'Kwara', 'Nasarawa', 'Niger', 'Plateau', 'Federal Capital Territory'];
+            const northEast = ['Adamawa', 'Bauchi', 'Borno', 'Gombe', 'Taraba', 'Yobe'];
+            const northWest = ['Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Sokoto', 'Zamfara'];
+            const southEast = ['Abia', 'Anambra', 'Ebonyi', 'Enugu', 'Imo'];
+            const southSouth = ['Akwa Ibom', 'Bayelsa', 'Cross River', 'Delta', 'Edo', 'Rivers'];
+            const southWest = ['Ekiti', 'Lagos', 'Ogun', 'Ondo', 'Osun', 'Oyo'];
+
+            let geopoliticalZone = '';
+            if (northCentral.includes(state)) geopoliticalZone = 'North Central';
+            else if (northEast.includes(state)) geopoliticalZone = 'North East';
+            else if (northWest.includes(state)) geopoliticalZone = 'North West';
+            else if (southEast.includes(state)) geopoliticalZone = 'South East';
+            else if (southSouth.includes(state)) geopoliticalZone = 'South South';
+            else if (southWest.includes(state)) geopoliticalZone = 'South West';
+
+            return {
+                organization: context.organization ?? '',
+                geopoliticalZone,
+            };
+        } catch {
+            return { organization: '', geopoliticalZone: '' };
+        }
+    };
 
     const useOfOutcomeOptions = [
         { value: 'advocacy', label: 'Advocacy' },
@@ -59,15 +75,6 @@ export default function NationalYouthPage() {
     const previousEngagementOptions = [
         { value: 'yes', label: 'Yes' },
         { value: 'no', label: 'No' },
-    ];
-
-    const geographicalLocationOptions = [
-        { value: 'North Central', label: 'North Central' },
-        { value: 'North East', label: 'North East' },
-        { value: 'North West', label: 'North West' },
-        { value: 'South East', label: 'South East' },
-        { value: 'South South', label: 'South South' },
-        { value: 'South West', label: 'South West' },
     ];
 
     const urgentPriorityOptions = [
@@ -95,13 +102,13 @@ export default function NationalYouthPage() {
                 stakeholder,
                 reason,
                 expectation,
-                organization,
-                youth_focused_organization: youthFocusedOrganization,
+                organization: getRegistrationContext().organization,
+                youth_focused_organization: getRegistrationContext().organization,
                 application,
                 previous_engagement: previousEngagement,
                 benefited_from_fmyd: benefitedFromFMYD,
                 urgent_priority: urgentPriority,
-                geopolitical_zone: geopoliticalZone,
+                geopolitical_zone: getRegistrationContext().geopoliticalZone,
             };
             sessionStorage.setItem(NATIONAL_YOUTH_DRAFT_KEY, JSON.stringify(draft));
             routeToNextPage();
@@ -122,16 +129,7 @@ export default function NationalYouthPage() {
                     </p>
                 </div>
 
-                <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
-                    <div className="mb-4 border-b border-gray-100 pb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#277B12]">
-                            Program-specific questions
-                        </span>
-                        <h2 className="rounded-md bg-[#277B12] px-3 py-2 text-base font-bold uppercase tracking-wide text-white sm:text-lg">
-                            National Validation and Adoption Workshop of the National Youth Policy
-                        </h2>
-                    </div>
-
+                <section>
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2">
                     <TextField
                         type="text"
@@ -163,33 +161,11 @@ export default function NationalYouthPage() {
                         id="expectation"
                     />
 
-                    {/* Embassy field */}
-                    <TextField
-                        type="dropdown"
-                        label="Which organisation or institution do you represent"
-                        placeholder="NGO/ISO"
-                        value={organization}
-                        onChange={setOrganization}
-                        required
-                        options={embassyOptions}
-                        id="organization"
-                    />
-
-                    <TextField
-                        type="text"
-                        label="Do you belong to a youth focused organization?"
-                        placeholder="Yes/No, Name of Organization"
-                        value={youthFocusedOrganization}
-                        onChange={setYouthFocusedOrganization}
-                        required
-                        id="youth_focused_organization"
-                    />
-
                     {/* Baking Business field */}
                     <TextField
                         type="dropdown"
                         label="How do you intend to apply the outcome of the revised National Youth Policy?"
-                        placeholder="Advocacy"
+                        placeholder="Select an option"
                         value={application}
                         onChange={setApplication}
                         required
@@ -200,7 +176,7 @@ export default function NationalYouthPage() {
                     <TextField
                         type="dropdown"
                         label="Have you previously participated in any Federal Ministry of Youth Development programme, study, workshop or training?"
-                        placeholder="Workshops/Training"
+                        placeholder="Select an option"
                         value={previousEngagement}
                         onChange={setPreviousEngagement}
                         required
@@ -210,8 +186,8 @@ export default function NationalYouthPage() {
                     {/* Benefited from FMYD field */}
                     <TextField
                         type="dropdown"
-                        label="Have you benefited from the Federal Ministry of Youth Development?"
-                        placeholder="Yes/No"
+                        label="Have you participated in any Federal Ministry of Youth Development programme?"
+                        placeholder="Select an option"
                         value={benefitedFromFMYD}
                         onChange={setBenefitedFromFMYD}
                         required
@@ -222,24 +198,12 @@ export default function NationalYouthPage() {
                     <TextField
                         type="dropdown"
                         label="What do you think is the most urgent priority for youth development in Nigeria?"
-                        placeholder="Urgent Priority"
+                        placeholder="Select an option"
                         value={urgentPriority}
                         onChange={setUrgentPriority}
                         required
                         options={urgentPriorityOptions}
                         id="urgent_priority"
-                    />
-
-                    {/* Geopolitical Zone field */}
-                    <TextField
-                        type="dropdown"
-                        label="What is your geopolitical zone?"
-                        placeholder="Geopolitical Zone"
-                        value={geopoliticalZone}
-                        onChange={setGeopoliticalZone}
-                        required
-                        options={geographicalLocationOptions}
-                        id="geopolitical_zone"
                     />
 
                     {submitError && (

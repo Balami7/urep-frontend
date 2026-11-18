@@ -3,6 +3,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/+$/
 export const REGISTERED_USER_ID_KEY = 'urep_registered_user_id';
 export const REGISTRATION_REFERENCE_KEY = 'urep_registration_reference';
 export const NATIONAL_YOUTH_DRAFT_KEY = 'urep_national_youth_draft';
+export const REGISTRATION_CONTEXT_KEY = 'urep_registration_context';
 
 export interface NationalYouthDraft {
   stakeholder: string;
