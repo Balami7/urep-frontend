@@ -40,7 +40,7 @@ export default function RegisterPage() {
     const [registrationReference, setRegistrationReference] = useState('');
     const isMinistryStaff = registrantType === 'ministry_of_youth';
     const isFastTrackRegistrant = ['fmyd', 'govt_agency', 'state_ministry'].includes(registrantType);
-    const requiresNin = [
+    const requiresNin = !isFastTrackRegistrant && [
         'youth_participant',
         'nycn',
         'nans',
@@ -321,6 +321,11 @@ export default function RegisterPage() {
             { number: 5, title: 'Review', desc: 'Check your information before submitting' },
         ];
 
+    const currentStepIndex = steps.findIndex((step) => step.number === currentStep);
+    const progressPercent = steps.length > 1
+        ? (currentStepIndex / (steps.length - 1)) * 100
+        : 0;
+
     const handlePrev = () => {
         const currentStepIndex = steps.findIndex((step) => step.number === currentStep);
         if (currentStepIndex > 0) {
@@ -437,12 +442,12 @@ export default function RegisterPage() {
                 if (!staffRegistration.id) {
                     throw new Error('The registration service did not return a staff ID. Please try again.');
                 }
-                if (!/^[a-zA-Z0-9]{8}$/.test(staffRegistration.urep_code)) {
-                    throw new Error('The registration service returned an invalid reference code. Please contact support.');
+                if (!staffRegistration.urep_code?.trim()) {
+                    throw new Error('The registration service did not return a reference code. Please contact support.');
                 }
 
                 try {
-                    sessionStorage.setItem(REGISTRATION_REFERENCE_KEY, staffRegistration.urep_code);
+                    sessionStorage.setItem(REGISTRATION_REFERENCE_KEY, staffRegistration.urep_code.trim());
                 } catch {
                     throw new Error('Your staff record was created, but browser storage is blocked. Enable storage and retry.');
                 }
@@ -478,12 +483,12 @@ export default function RegisterPage() {
                 if (!registration.id) {
                     throw new Error('The registration service did not return a user ID. Please try again.');
                 }
-                if (!/^[a-zA-Z0-9]{8}$/.test(registration.urep_code)) {
-                    throw new Error('The registration service returned an invalid reference code. Please contact support.');
+                if (!registration.urep_code?.trim()) {
+                    throw new Error('The registration service did not return a reference code. Please contact support.');
                 }
 
                 userId = registration.id;
-                referenceCode = registration.urep_code;
+                referenceCode = registration.urep_code.trim();
                 setRegisteredUserId(userId);
                 setRegistrationReference(referenceCode);
             }
@@ -554,7 +559,11 @@ export default function RegisterPage() {
                         {isMinistryStaff ? 'Ministry Staff Sign Up' : 'Create your account'}
                     </h1>
                     <p className="text-xs text-gray-500 mt-0.5">
-                        {isMinistryStaff ? 'Create a staff account with your official government email' : `Join the Unified Registration Portal in ${totalSteps} steps`}
+                        {isMinistryStaff
+                            ? 'Create a staff account with your official government email'
+                            : isFastTrackRegistrant
+                                ? 'Quick registration — complete your details, then review'
+                                : `Join the Unified Registration Portal in ${totalSteps} steps`}
                     </p>
                 </div>
 
@@ -564,7 +573,7 @@ export default function RegisterPage() {
                         <div className="absolute top-3.5 left-6 right-6 h-0.5 bg-gray-200 -z-0" />
                         <div
                             className="absolute top-3.5 left-6 h-0.5 bg-[#277B12] -z-0 transition-all duration-300"
-                            style={{ width: `calc(${((currentStep - 1) / (steps.length - 1)) * 100}% - 24px)` }}
+                            style={{ width: progressPercent === 100 ? 'calc(100% - 48px)' : `calc(${progressPercent}% - 24px)` }}
                         />
                         {steps.map((s) => {
                             const isCompleted = currentStep > s.number;
@@ -599,7 +608,7 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Active Section Header */}
-                <div className="border-b border-gray-100 pb-2 mb-3 flex items-center justify-between">
+                <div className="mb-3 flex items-center justify-between">
                     <div>
                         <span className="text-[10px] font-semibold text-[#277B12] uppercase tracking-wider">
                             Step {currentStep} of {totalSteps}
@@ -1096,7 +1105,7 @@ export default function RegisterPage() {
                     )}
 
                     {/* Progressive Stepper Controls */}
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-3">
                         <button
                             type="button"
                             onClick={handleBack}
