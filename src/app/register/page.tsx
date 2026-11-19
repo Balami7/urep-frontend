@@ -39,7 +39,14 @@ export default function RegisterPage() {
     const [registeredUserId, setRegisteredUserId] = useState('');
     const [registrationReference, setRegistrationReference] = useState('');
     const isMinistryStaff = registrantType === 'ministry_of_youth';
-    const requiresNin = registrantType === 'youth_participant' || registrantType === 'corps_member';
+    const isFastTrackRegistrant = ['fmyd', 'govt_agency', 'state_ministry'].includes(registrantType);
+    const requiresNin = [
+        'youth_participant',
+        'nycn',
+        'nans',
+        'youth_parliament',
+        'confab_delegate',
+    ].includes(registrantType);
     const totalSteps = isMinistryStaff ? 2 : 5;
     const [nin, setNin] = useState('');
     const [otpCode, setOtpCode] = useState('');
@@ -49,10 +56,17 @@ export default function RegisterPage() {
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
     const registrantTypeOptions = [
-        { value: 'youth_participant', label: 'Youth Participant' },
-        { value: 'corps_member', label: 'Corps Member' },
+        { value: 'youth_participant', label: 'Youth Participants' },
+        { value: 'nycn', label: 'NYCN' },
+        { value: 'nans', label: 'NANS' },
+        { value: 'youth_parliament', label: 'Youth Parliament' },
+        { value: 'confab_delegate', label: 'Confab Delegate' },
+        { value: 'ngo', label: 'NGO' },
+        { value: 'fmyd', label: 'FMYD' },
+        { value: 'govt_agency', label: 'Govt Agency' },
+        { value: 'state_ministry', label: 'State Ministry' },
         { value: 'guest', label: 'Guest' },
-        { value: 'ministry_of_youth', label: 'Staff' },
+        ...(isMinistryStaff ? [{ value: 'ministry_of_youth', label: 'Staff' }] : []),
     ];
 
     const genderOptions = [
@@ -294,6 +308,11 @@ export default function RegisterPage() {
             { number: 1, title: 'Staff Details', desc: 'Official and personal details' },
             { number: 2, title: 'Review', desc: 'Check your information before submitting' },
         ]
+        : isFastTrackRegistrant
+            ? [
+                { number: 1, title: 'Personal Info', desc: 'Personal and account details' },
+                { number: 5, title: 'Review', desc: 'Check your information before submitting' },
+            ]
         : [
             { number: 1, title: 'Personal Info', desc: 'Personal details' },
             { number: 2, title: 'Account', desc: 'Login credentials' },
@@ -303,8 +322,9 @@ export default function RegisterPage() {
         ];
 
     const handlePrev = () => {
-        if (currentStep > 1) {
-            setCurrentStep((prev) => prev - 1);
+        const currentStepIndex = steps.findIndex((step) => step.number === currentStep);
+        if (currentStepIndex > 0) {
+            setCurrentStep(steps[currentStepIndex - 1].number);
         }
     };
 
@@ -326,6 +346,24 @@ export default function RegisterPage() {
                 setApiError('Complete NIN lookup and OTP verification before continuing.');
                 return;
             }
+            if (isFastTrackRegistrant) {
+                if (password.length < 8) {
+                    const passwordElem = document.getElementById('password') as HTMLInputElement;
+                    if (passwordElem) {
+                        passwordElem.setCustomValidity('Password must be at least 8 characters');
+                        passwordElem.reportValidity();
+                    }
+                    return;
+                }
+                if (password !== confirmPassword) {
+                    const confirmElem = document.getElementById('confirmPassword') as HTMLInputElement;
+                    if (confirmElem) {
+                        confirmElem.setCustomValidity('Passwords do not match');
+                        confirmElem.reportValidity();
+                    }
+                    return;
+                }
+            }
             if (isMinistryStaff) {
                 if (!isOfficialGovernmentEmail(email)) {
                     const emailElem = document.getElementById('email') as HTMLInputElement;
@@ -334,7 +372,7 @@ export default function RegisterPage() {
                     return;
                 }
             }
-            setCurrentStep(2);
+            setCurrentStep(isFastTrackRegistrant ? 5 : 2);
             return;
         }
 
@@ -463,19 +501,21 @@ export default function RegisterPage() {
                 throw new Error('Your account was created, but browser storage is blocked. Enable storage and retry.');
             }
 
-            await postToApi(`/api/auth/users/${encodeURIComponent(userId)}/profile`, {
-                state_of_origin: stateOfOrigin,
-                lga_of_origin: lgaOfOrigin,
-                marital_status: maritalStatus,
-                disability: disabilityStatus
-                    .map((value) => value === 'other' && otherDisability ? `other: ${otherDisability}` : value)
-                    .join(', '),
-                education_level: educationLevel === 'other' ? otherEducation : educationLevel,
-                occupation_status: occupationStatus === 'other' ? otherOccupation : occupationStatus,
-                skills,
-                area_of_interest: areasOfInterest,
-                years_of_experience: yearsExperience,
-            });
+            if (!isFastTrackRegistrant) {
+                await postToApi(`/api/auth/users/${encodeURIComponent(userId)}/profile`, {
+                    state_of_origin: stateOfOrigin,
+                    lga_of_origin: lgaOfOrigin,
+                    marital_status: maritalStatus,
+                    disability: disabilityStatus
+                        .map((value) => value === 'other' && otherDisability ? `other: ${otherDisability}` : value)
+                        .join(', '),
+                    education_level: educationLevel === 'other' ? otherEducation : educationLevel,
+                    occupation_status: occupationStatus === 'other' ? otherOccupation : occupationStatus,
+                    skills,
+                    area_of_interest: areasOfInterest,
+                    years_of_experience: yearsExperience,
+                });
+            }
 
             router.push(isMinistryStaff ? '/dashboard' : selectedProgramme ? `/programs/${selectedProgramme}` : '/');
         } catch (error) {
@@ -564,9 +604,13 @@ export default function RegisterPage() {
                         <span className="text-[10px] font-semibold text-[#277B12] uppercase tracking-wider">
                             Step {currentStep} of {totalSteps}
                         </span>
-                        <h2 className="text-base sm:text-lg font-bold text-gray-900">{steps[currentStep - 1].title}</h2>
+                        <h2 className="text-base sm:text-lg font-bold text-gray-900">
+                            {steps.find((step) => step.number === currentStep)?.title}
+                        </h2>
                     </div>
-                    <span className="text-xs text-gray-400 hidden sm:block">{steps[currentStep - 1].desc}</span>
+                    <span className="text-xs text-gray-400 hidden sm:block">
+                        {steps.find((step) => step.number === currentStep)?.desc}
+                    </span>
                 </div>
 
                 {/* Form Body - Native HTML5 Validation */}
@@ -706,6 +750,40 @@ export default function RegisterPage() {
                                             onChange={setStaffId}
                                             required
                                             id="staffId"
+                                        />
+                                    </>
+                                )}
+                                {isFastTrackRegistrant && (
+                                    <>
+                                        <TextField
+                                            type="email"
+                                            label="Email Address"
+                                            placeholder="you@example.com"
+                                            value={email}
+                                            onChange={(value) => {
+                                                setEmail(value);
+                                                (document.getElementById('email') as HTMLInputElement | null)?.setCustomValidity('');
+                                            }}
+                                            required
+                                            id="email"
+                                        />
+                                        <TextField
+                                            type="password"
+                                            label="Password"
+                                            placeholder="Create password"
+                                            value={password}
+                                            onChange={handlePasswordChange}
+                                            required
+                                            id="password"
+                                        />
+                                        <TextField
+                                            type="password"
+                                            label="Confirm Password"
+                                            placeholder="Re-enter password"
+                                            value={confirmPassword}
+                                            onChange={handleConfirmPasswordChange}
+                                            required
+                                            id="confirmPassword"
                                         />
                                     </>
                                 )}
@@ -987,6 +1065,14 @@ export default function RegisterPage() {
                                     <>
                                         <div><dt className="font-medium text-gray-500">Gender</dt><dd className="text-gray-900">{gender || '—'}</dd></div>
                                         <div><dt className="font-medium text-gray-500">Staff ID</dt><dd className="text-gray-900">{staffId || '—'}</dd></div>
+                                    </>
+                                ) : isFastTrackRegistrant ? (
+                                    <>
+                                        <div><dt className="font-medium text-gray-500">Gender</dt><dd className="text-gray-900">{gender || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Organization</dt><dd className="text-gray-900">{organization || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">Organization code</dt><dd className="text-gray-900">{organizationCode || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">State of residence</dt><dd className="text-gray-900">{stateOfResidence || '—'}</dd></div>
+                                        <div><dt className="font-medium text-gray-500">LGA of residence</dt><dd className="text-gray-900">{lgaOfResidence || '—'}</dd></div>
                                     </>
                                 ) : (
                                     <>
