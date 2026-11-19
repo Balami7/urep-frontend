@@ -26,7 +26,6 @@ export default function NationalYouthPage() {
     const [expectation, setExpectation] = useState('');
     const [application, setApplication] = useState('');
     const [previousEngagement, setPreviousEngagement] = useState('');
-    const [benefitedFromFMYD, setBenefitedFromFMYD] = useState('');
     const [reason, setReason] = useState('');
     const [urgentPriority, setUrgentPriority] = useState('');
     const [submitError, setSubmitError] = useState('');
@@ -120,7 +119,7 @@ export default function NationalYouthPage() {
                 youth_focused_organization: getRegistrationContext().organization,
                 application,
                 previous_engagement: previousEngagement,
-                benefited_from_fmyd: benefitedFromFMYD,
+                benefited_from_fmyd: previousEngagement,
                 urgent_priority: urgentPriority,
                 geopolitical_zone: getRegistrationContext().geopoliticalZone,
             };
@@ -227,17 +226,6 @@ export default function NationalYouthPage() {
                         required
                         options={previousEngagementOptions}
                         id="previous_engagement"
-                    />
-                    {/* Benefited from FMYD field */}
-                    <TextField
-                        type="dropdown"
-                        label="Have you participated in any Federal Ministry of Youth Development programme?"
-                        placeholder="Select an option"
-                        value={benefitedFromFMYD}
-                        onChange={setBenefitedFromFMYD}
-                        required
-                        options={previousEngagementOptions}
-                        id="benefited_from_fmyd"
                     />
                     {/* Urgent Priority field */}
                     <TextField

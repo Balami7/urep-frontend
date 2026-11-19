@@ -14,6 +14,8 @@ import {
     REGISTRATION_CONTEXT_KEY,
 } from "@/lib/urep-api";
 
+const GUEST_ORGANIZATION_CODE = 'UREP-GUEST';
+
 export default function RegisterPage() {
     const router = useRouter();
 
@@ -39,6 +41,7 @@ export default function RegisterPage() {
     const [registeredUserId, setRegisteredUserId] = useState('');
     const [registrationReference, setRegistrationReference] = useState('');
     const isMinistryStaff = registrantType === 'ministry_of_youth';
+    const isGuest = registrantType === 'guest';
     const isFastTrackRegistrant = ['fmyd', 'govt_agency', 'state_ministry'].includes(registrantType);
     const requiresNin = !isFastTrackRegistrant && [
         'youth_participant',
@@ -165,6 +168,11 @@ export default function RegisterPage() {
 
     const handleRegistrantTypeChange = (value: string) => {
         setRegistrantType(value);
+        if (value === 'guest') {
+            setOrganizationCode(GUEST_ORGANIZATION_CODE);
+        } else if (registrantType === 'guest' && organizationCode === GUEST_ORGANIZATION_CODE) {
+            setOrganizationCode('');
+        }
         setNin('');
         setOtpCode('');
         setOtpRequestId('');
@@ -348,6 +356,12 @@ export default function RegisterPage() {
             { number: 1, title: 'Staff Details', desc: 'Official and personal details' },
             { number: 2, title: 'Review', desc: 'Check your information before submitting' },
         ]
+        : isGuest
+            ? [
+                { number: 1, title: 'Personal Info', desc: 'Personal and account details' },
+                { number: 4, title: 'Education & Skills', desc: 'Qualifications, skills and experience' },
+                { number: 5, title: 'Review', desc: 'Check your information before submitting' },
+            ]
         : isFastTrackRegistrant
             ? [
                 { number: 1, title: 'Personal Info', desc: 'Personal and account details' },
@@ -391,7 +405,7 @@ export default function RegisterPage() {
                 setApiError('Complete NIN lookup and OTP verification before continuing.');
                 return;
             }
-            if (isFastTrackRegistrant) {
+            if (isFastTrackRegistrant || isGuest) {
                 if (password.length < 8) {
                     const passwordElem = document.getElementById('password') as HTMLInputElement;
                     if (passwordElem) {
@@ -417,7 +431,7 @@ export default function RegisterPage() {
                     return;
                 }
             }
-            setCurrentStep(isFastTrackRegistrant ? 5 : 2);
+            setCurrentStep(isFastTrackRegistrant ? 5 : isGuest ? 4 : 2);
             return;
         }
 
@@ -603,7 +617,9 @@ export default function RegisterPage() {
                             ? 'Create a staff account with your official government email'
                             : isFastTrackRegistrant
                                 ? 'Quick registration — complete your details, then review'
-                                : `Join the Unified Registration Portal in ${totalSteps} steps`}
+                                : isGuest
+                                    ? 'Quick registration — complete your details, then continue to education and skills'
+                                    : `Join the Unified Registration Portal in ${totalSteps} steps`}
                     </p>
                 </div>
 
@@ -615,19 +631,19 @@ export default function RegisterPage() {
                             className="absolute top-3.5 left-6 h-0.5 bg-[#277B12] -z-0 transition-all duration-300"
                             style={{ width: progressPercent === 100 ? 'calc(100% - 48px)' : `calc(${progressPercent}% - 24px)` }}
                         />
-                        {steps.map((s) => {
-                            const isCompleted = currentStep > s.number;
-                            const isCurrent = currentStep === s.number;
+                        {steps.map((s, index) => {
+                            const isCompleted = index < currentStepIndex;
+                            const isCurrent = index === currentStepIndex;
                             return (
                                 <div key={s.number} className="flex flex-col items-center z-10 bg-white px-2">
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            if (s.number < currentStep) {
+                                            if (index < currentStepIndex) {
                                                 setCurrentStep(s.number);
                                             }
                                         }}
-                                        disabled={s.number > currentStep}
+                                        disabled={index > currentStepIndex}
                                         className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-200 ${isCompleted
                                                 ? 'bg-[#277B12] text-white hover:bg-[#1b5c0d] cursor-pointer'
                                                 : isCurrent
@@ -635,7 +651,7 @@ export default function RegisterPage() {
                                                     : 'border-2 border-gray-200 bg-white text-gray-400 cursor-not-allowed'
                                             }`}
                                     >
-                                        {isCompleted ? <Check size={14} /> : s.number}
+                                        {isCompleted ? <Check size={14} /> : index + 1}
                                     </button>
                                     <span className={`text-[10px] sm:text-xs mt-1 hidden sm:block font-medium ${isCurrent ? 'text-[#277B12] font-semibold' : isCompleted ? 'text-gray-700' : 'text-gray-400'
                                         }`}>
@@ -651,7 +667,7 @@ export default function RegisterPage() {
                 <div className="mb-3 flex items-center justify-between">
                     <div>
                         <span className="text-[10px] font-semibold text-[#277B12] uppercase tracking-wider">
-                            Step {currentStep} of {totalSteps}
+                            Step {currentStepIndex + 1} of {steps.length}
                         </span>
                         <h2 className="text-base sm:text-lg font-bold text-gray-900">
                             {steps.find((step) => step.number === currentStep)?.title}
@@ -735,16 +751,6 @@ export default function RegisterPage() {
                                 </div>
                             )}
 
-                            {/* Selected Programme */}
-                            {!isMinistryStaff && <div className="flex flex-col gap-1 mb-1">
-                                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                                    Selected Programme <span className="text-red-500">*</span>
-                                </label>
-                                <div className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-medium">
-                                    {selectedProgramName || 'General Youth Registration (Default)'}
-                                </div>
-                            </div>}
-
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 pt-1">
                                 <TextField
                                     type="text"
@@ -802,7 +808,7 @@ export default function RegisterPage() {
                                         />
                                     </>
                                 )}
-                                {isFastTrackRegistrant && (
+                                {(isFastTrackRegistrant || isGuest) && (
                                     <>
                                         <TextField
                                             type="email"
