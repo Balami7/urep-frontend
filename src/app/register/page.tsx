@@ -69,6 +69,38 @@ export default function RegisterPage() {
         { value: 'ministry_of_youth', label: 'Staff' },
     ];
 
+    const governmentAgencyOptions = [
+        'CITIZENSHIP AND LEADERSHIP TRAINING CENTRE',
+        'FEDERAL MIN. OF WOMEN AFFAIRS AND SOCIAL DEVELOPMENT',
+        'FEDERAL MINISTRY OF ENVIRONMENT',
+        'FEDERAL MINISTRY OF EDUCATION',
+        'FEDERAL MINISTRY OF HUMANITARIAN AFFAIRS AND POVERTY REDUCTION',
+        'FEDERAL MINISTRY OF LABOUR AND EMPLOYMENT',
+        'FEDERAL MINISTRY OF WATER RESOURCES AND SANITATION',
+        'FEDERAL MINISTRY OF INNOVATION, SCIENCE AND TECHNOLOGY',
+        'FEDERAL MINISTRY OF AGRICULTURE AND FOOD SECURITY',
+        'NATIONAL INFORMATION, TECHNOLOGY DEVELOPMENT AGENCY (NITDA)',
+        'NATIONAL YOUTH SERVICE CORPS (NYSC)',
+        'NATIONAL DRUGS LAW ENFORCEMENT AGENCY (NDLEA)',
+        'NIGERIAN DATA PROTECTION COMMISSION',
+        'NIGERIAN EDUCATION LOAN FUND (NELFUND)',
+        'SMALL AND MEDIUM ENTERPRISES DEVELOPMENT AGENCY OF NIGERIA',
+        'FEDERAL MINISTRY OF INFORMATION AND NATIONAL ORIENTATION',
+        'FEDERAL MINISTRY OF HEALTH AND SOCIAL WELFARE',
+        'FEDERAL MINISTRY OF COMMUNICATION, INNOVATION AND DIGITAL ECONOMY',
+        'FEDERAL MINISTRY OF SCIENCE AND TECNOLOGY AND INNOVATION',
+        'NATIONAL DRUG LAWENFORCEMENT AGENCY (NDLEA)',
+        'FEDERAL MINISTRY OF BUGET AND ECONOMIC PLANNING',
+        'FEDERAL MINISTRY OF INDUSTRY, TRADE AND INVESTEMENT',
+        'NIGERIAN IMMIGRATION SERVICES',
+        'FEDERAL MINISTRY OF JUSTICE',
+        'NATIONAL SPORTS COMMISSION',
+        'NATIONAL DIRECTORATE OF EMPLOYMENT (NDE)',
+        'NATIONAL BOARD FOR TECHNICAL EDUCATION (NBTE)',
+        'NATIONAL HUMAN RIGHTS COMMISSION (NHRC)',
+        'NATIONAL POPULATION COMMISSION',
+    ].map((agency) => ({ value: agency, label: agency }));
+
     const genderOptions = [
         { value: 'Male', label: 'Male' },
         { value: 'Female', label: 'Female' },
@@ -808,11 +840,12 @@ export default function RegisterPage() {
                             {!isMinistryStaff && (
                                 <>
                                     <TextField
-                                        type="text"
+                                        type={registrantType === 'govt_agency' ? 'dropdown' : 'text'}
                                         label="Organization"
-                                        placeholder="Enter your organization"
+                                        placeholder={registrantType === 'govt_agency' ? 'Select your agency' : 'Enter your organization'}
                                         value={organization}
                                         onChange={setOrganization}
+                                        options={registrantType === 'govt_agency' ? governmentAgencyOptions : undefined}
                                         required
                                         id="organization"
                                     />
