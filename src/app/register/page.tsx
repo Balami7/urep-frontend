@@ -66,7 +66,7 @@ export default function RegisterPage() {
         { value: 'govt_agency', label: 'Govt Agency' },
         { value: 'state_ministry', label: 'State Ministry' },
         { value: 'guest', label: 'Guest' },
-        ...(isMinistryStaff ? [{ value: 'ministry_of_youth', label: 'Staff' }] : []),
+        { value: 'ministry_of_youth', label: 'Staff' },
     ];
 
     const genderOptions = [
@@ -137,6 +137,14 @@ export default function RegisterPage() {
         setOtpCode('');
         setOtpRequestId('');
         setIsNinVerified(false);
+        if (value === 'ministry_of_youth') {
+            setStateOfResidence('');
+            setLgaOfResidence('');
+            setLgaOfResidenceOptions([]);
+            setStateOfOrigin('');
+            setLgaOfOrigin('');
+            setLgaOfOriginOptions([]);
+        }
     };
 
     const handleSendNinOtp = async () => {
@@ -817,30 +825,32 @@ export default function RegisterPage() {
                                         required
                                         id="organizationCode"
                                     />
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                                        <TextField
-                                            type="dropdown"
-                                            label="State of Residence"
-                                            placeholder="Select State"
-                                            value={stateOfResidence}
-                                            onChange={handleStateOfResidenceChange}
-                                            options={stateOptions}
-                                            required
-                                            id="stateOfResidence"
-                                        />
-                                        <TextField
-                                            type="dropdown"
-                                            label="LGA of Residence"
-                                            placeholder="Select LGA"
-                                            value={lgaOfResidence}
-                                            onChange={setLgaOfResidence}
-                                            options={lgaOfResidenceOptions}
-                                            required
-                                            id="lgaOfResidence"
-                                        />
-                                    </div>
                                 </>
                             )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                                <TextField
+                                    type="dropdown"
+                                    label="State of Residence"
+                                    placeholder="Select State"
+                                    value={stateOfResidence}
+                                    onChange={handleStateOfResidenceChange}
+                                    options={stateOptions}
+                                    required={!isMinistryStaff}
+                                    disabled={isMinistryStaff}
+                                    id="stateOfResidence"
+                                />
+                                <TextField
+                                    type="dropdown"
+                                    label="LGA of Residence"
+                                    placeholder="Select LGA"
+                                    value={lgaOfResidence}
+                                    onChange={setLgaOfResidence}
+                                    options={lgaOfResidenceOptions}
+                                    required={!isMinistryStaff}
+                                    disabled={isMinistryStaff}
+                                    id="lgaOfResidence"
+                                />
+                            </div>
                         </div>
                     )}
 
