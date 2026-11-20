@@ -9,6 +9,17 @@ export const ADMIN_ACCESS_TOKEN_KEY = 'urep_admin_access_token';
 export const USER_ID_KEY = 'urep_user_id';
 export const ADMIN_ID_KEY = 'urep_admin_id';
 
+function setAuthCookie(name: string, value: string) {
+  if (typeof document === 'undefined') return;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${60 * 60 * 24 * 7}; SameSite=Lax${secure}`;
+}
+
+function clearAuthCookie(name: string) {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
 export interface AuthData {
   access_token?: string;
   token_type?: string;
@@ -21,13 +32,19 @@ export interface AuthData {
 
 export function storeUserAuth(data: AuthData) {
   const userId = data.id ?? data.user_id;
-  if (data.access_token) sessionStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+  if (data.access_token) {
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+    setAuthCookie(ACCESS_TOKEN_KEY, data.access_token);
+  }
   if (userId) sessionStorage.setItem(USER_ID_KEY, userId);
   if (userId) sessionStorage.setItem(REGISTERED_USER_ID_KEY, userId);
 }
 
 export function storeAdminAuth(data: AuthData) {
-  if (data.access_token) sessionStorage.setItem(ADMIN_ACCESS_TOKEN_KEY, data.access_token);
+  if (data.access_token) {
+    sessionStorage.setItem(ADMIN_ACCESS_TOKEN_KEY, data.access_token);
+    setAuthCookie(ADMIN_ACCESS_TOKEN_KEY, data.access_token);
+  }
   if (data.id) sessionStorage.setItem(ADMIN_ID_KEY, data.id);
 }
 
@@ -37,6 +54,8 @@ export function clearAuth() {
   sessionStorage.removeItem(USER_ID_KEY);
   sessionStorage.removeItem(ADMIN_ID_KEY);
   sessionStorage.removeItem(REGISTERED_USER_ID_KEY);
+  clearAuthCookie(ACCESS_TOKEN_KEY);
+  clearAuthCookie(ADMIN_ACCESS_TOKEN_KEY);
 }
 
 export interface NationalYouthDraft {

@@ -38,70 +38,81 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f4f7f4] px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-        <Link href="/" className="mb-8 flex items-center gap-3">
-          <Image
-            src="/fmyd_logo1.png"
-            alt="Federal Ministry of Youth Development"
-            width={56}
-            height={56}
-            className="h-12 w-auto object-contain"
-          />
-          <div>
-            <p className="font-bold text-gray-900">Unified Registration Portal</p>
-            <p className="text-xs text-gray-500">Federal Ministry of Youth Development</p>
-          </div>
-        </Link>
-
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-[#277B12]">
-            <ShieldCheck size={24} />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin sign in</h1>
-          <p className="mt-1 text-sm text-gray-500">Sign in with your provisioned administrator account</p>
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-white">
+      <Link href="/" className="absolute left-5 top-5 z-20 flex items-center gap-3 sm:left-10 sm:top-7">
+        <Image
+          src="/fmyd_logo1.png"
+          alt="Federal Ministry of Youth Development Logo"
+          width={64}
+          height={64}
+          className="h-12 w-auto object-contain sm:h-14"
+          priority
+        />
+        <div className="flex flex-col">
+          <span className="text-sm font-bold leading-tight tracking-tight text-gray-900 sm:text-base">
+            Unified Registration Portal
+          </span>
+          <span className="text-[11px] font-medium leading-none text-gray-500">
+            Federal Ministry of Youth Development
+          </span>
         </div>
+      </Link>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <TextField
-            id="admin-email"
-            type="email"
-            label="Admin email address"
-            placeholder="admin@example.gov.ng"
-            value={email}
-            onChange={setEmail}
-            required
-          />
-          <TextField
-            id="admin-password"
-            type="password"
-            label="Password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={setPassword}
-            required
-          />
+      <div className="flex flex-1 items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="mb-6 flex flex-col items-center text-center">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-[#277B12] sm:h-20 sm:w-20">
+              <ShieldCheck size={32} />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              Welcome to Unified Registration Portal
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Sign in with your provisioned administrator account
+            </p>
+          </div>
 
-          {apiError && (
-            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{apiError}</p>
-          )}
+          <form onSubmit={handleSubmit} className="space-y-1">
+            <TextField
+              id="admin-email"
+              type="email"
+              label="Email Address"
+              placeholder="admin@example.gov.ng"
+              value={email}
+              onChange={setEmail}
+              required
+            />
+            <TextField
+              id="admin-password"
+              type="password"
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={setPassword}
+              required
+            />
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#277B12] px-4 py-2.5 font-semibold text-white transition hover:bg-[#1b5c0d] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting && <LoaderCircle size={16} className="animate-spin" />}
-            {isSubmitting ? 'Signing in...' : 'Sign in to admin portal'}
-          </button>
-        </form>
+            {apiError && (
+              <p role="alert" className="mt-3 text-center text-sm text-red-600">{apiError}</p>
+            )}
 
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Not an administrator?{' '}
-          <Link href="/login" className="font-semibold text-[#277B12] hover:underline">
-            Participant sign in
-          </Link>
-        </p>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#277B12] px-4 py-2.5 font-semibold text-white transition hover:bg-[#1b5c0d] focus:outline-none focus:ring-2 focus:ring-[#277B12] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting && <LoaderCircle size={16} className="animate-spin" />}
+              {isSubmitting ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Not an administrator?{' '}
+            <Link href="/login" className="font-semibold text-[#277B12] hover:underline">
+              Participant sign in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

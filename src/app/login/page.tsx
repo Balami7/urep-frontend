@@ -138,12 +138,6 @@ export default function LoginPage() {
                             Register
                         </Link>
                     </p>
-                    <p className="text-center text-sm text-gray-500 mt-3">
-                        Administrator?{' '}
-                        <Link href="/admin-login" className="text-[#277B12] hover:underline font-semibold">
-                            Sign in to the admin portal
-                        </Link>
-                    </p>
                 </div>
             </div>
         </div>
