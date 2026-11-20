@@ -41,7 +41,7 @@ export default function NationalYouthPage() {
             };
             const state = context.state_of_residence ?? '';
 
-            const northCentral = ['Benue', 'Kogi', 'Kwara', 'Nasarawa', 'Niger', 'Plateau', 'Federal Capital Territory'];
+            const northCentral = ['Benue', 'FCT', 'Federal Capital Territory', 'Kogi', 'Kwara', 'Nasarawa', 'Niger', 'Plateau'];
             const northEast = ['Adamawa', 'Bauchi', 'Borno', 'Gombe', 'Taraba', 'Yobe'];
             const northWest = ['Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Sokoto', 'Zamfara'];
             const southEast = ['Abia', 'Anambra', 'Ebonyi', 'Enugu', 'Imo'];

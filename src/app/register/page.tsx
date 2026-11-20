@@ -528,6 +528,7 @@ export default function RegisterPage() {
                     selected_program: selectedProgramme || 'general',
                     organization,
                     organization_code: organizationCode,
+                    ...(registrantType === 'govt_agency' ? { government_agency: organization } : {}),
                     phone_number: phoneNumber,
                     gender,
                     state_of_residence: stateOfResidence,
@@ -562,9 +563,9 @@ export default function RegisterPage() {
 
             if (!isFastTrackRegistrant) {
                 await postToApi(`/api/auth/users/${encodeURIComponent(userId)}/profile`, {
-                    state_of_origin: stateOfOrigin,
-                    lga_of_origin: lgaOfOrigin,
-                    marital_status: maritalStatus,
+                    state_of_origin: isGuest ? 'Not provided' : stateOfOrigin,
+                    lga_of_origin: isGuest ? 'Not provided' : lgaOfOrigin,
+                    marital_status: isGuest ? 'Not provided' : maritalStatus,
                     disability: disabilityStatus
                         .map((value) => value === 'other' && otherDisability ? `other: ${otherDisability}` : value)
                         .join(', '),
