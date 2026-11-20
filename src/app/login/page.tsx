@@ -1,31 +1,41 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { TextField } from '../../components';
 import { useRouter } from "next/navigation";
+import { LoaderCircle } from "lucide-react";
+import { postToApi, storeUserAuth } from "@/lib/urep-api";
 
 export default function LoginPage() {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
-    const [isStaffLogin, setIsStaffLogin] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [apiError, setApiError] = useState('');
 
-    useEffect(() => {
-        setIsStaffLogin(new URLSearchParams(window.location.search).get('type') === 'staff');
-    }, []);
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isStaffLogin && !/^[^@\s]+@[^@\s]+\.gov\.ng$/i.test(email)) {
-            const emailInput = document.getElementById('email') as HTMLInputElement;
-            emailInput.setCustomValidity('Use your official government email address ending in .gov.ng.');
-            emailInput.reportValidity();
-            return;
+        setApiError('');
+        setIsSubmitting(true);
+        try {
+            const user = await postToApi<{
+                id: string;
+                email: string;
+                urep_code: string;
+                access_token: string;
+                token_type: string;
+                expires_in: number;
+            }>('/api/auth/login', { email, password });
+            storeUserAuth(user);
+            router.push('/dashboard');
+        } catch (error) {
+            setApiError(error instanceof Error ? error.message : 'Unable to sign in. Please try again.');
+        } finally {
+            setIsSubmitting(false);
         }
-        router.push('/dashboard');
     };
 
     return (
@@ -64,18 +74,18 @@ export default function LoginPage() {
                             priority
                         />
                         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-                            {isStaffLogin ? 'Ministry Staff Sign In' : 'Welcome to Unified Registration Portal'}
+                            Welcome to Unified Registration Portal
                         </h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            {isStaffLogin ? 'Sign in with your official government email' : 'Sign in to your youth portal account'}
+                            Sign in to your youth portal account
                         </p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-1">
                         <TextField
                             type="email"
-                            label={isStaffLogin ? 'Official Government Email' : 'Email Address'}
-                            placeholder={isStaffLogin ? 'name@agency.gov.ng' : 'you@example.com'}
+                            label="Email Address"
+                            placeholder="you@example.com"
                             value={email}
                             onChange={(value) => {
                                 setEmail(value);
@@ -83,7 +93,6 @@ export default function LoginPage() {
                             }}
                             required
                             id="email"
-                            hint={isStaffLogin ? 'Staff accounts require an official .gov.ng email address.' : undefined}
                         />
                         <TextField
                             type="password"
@@ -112,25 +121,27 @@ export default function LoginPage() {
 
                         <button
                             type="submit"
-                            className="w-full bg-[#277B12] text-white py-2.5 px-4 mt-4 rounded-lg font-semibold hover:bg-[#1b5c0d] transition-colors focus:outline-none focus:ring-2 focus:ring-[#277B12] focus:ring-offset-2"
+                            disabled={isSubmitting}
+                            className="w-full inline-flex items-center justify-center gap-2 bg-[#277B12] text-white py-2.5 px-4 mt-4 rounded-lg font-semibold hover:bg-[#1b5c0d] transition-colors focus:outline-none focus:ring-2 focus:ring-[#277B12] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            Sign In
+                            {isSubmitting && <LoaderCircle size={16} className="animate-spin" />}
+                            {isSubmitting ? 'Signing in...' : 'Sign In'}
                         </button>
+                        {apiError && (
+                            <p role="alert" className="mt-3 text-center text-sm text-red-600">{apiError}</p>
+                        )}
                     </form>
 
                     <p className="text-center text-sm text-gray-500 mt-6">
                         Don&apos;t have an account?{' '}
-                        <Link href={isStaffLogin ? '/register?type=staff' : '/register'} className="text-[#277B12] hover:underline font-semibold">
+                        <Link href="/register" className="text-[#277B12] hover:underline font-semibold">
                             Register
                         </Link>
                     </p>
                     <p className="text-center text-sm text-gray-500 mt-3">
-                        {isStaffLogin ? 'Not Ministry staff? ' : 'Ministry staff? '}
-                        <Link
-                            href={isStaffLogin ? '/login' : '/login?type=staff'}
-                            className="text-[#277B12] hover:underline font-semibold"
-                        >
-                            {isStaffLogin ? 'Participant sign in' : 'Staff sign in'}
+                        Administrator?{' '}
+                        <Link href="/admin-login" className="text-[#277B12] hover:underline font-semibold">
+                            Sign in to the admin portal
                         </Link>
                     </p>
                 </div>

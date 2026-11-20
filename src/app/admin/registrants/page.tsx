@@ -1,363 +1,141 @@
 'use client';
-import React from 'react';
-import {
-  FaBriefcase,
-  FaCalendarAlt,
-  FaChartPie,
-  FaEnvelope,
-  FaGraduationCap,
-  FaMapMarkerAlt,
-  FaPhone,
-  FaSearch,
-  FaUser
-} from 'react-icons/fa';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from 'recharts';
+
+import { useEffect, useMemo, useState } from 'react';
+import { FaEnvelope, FaMapMarkerAlt, FaPhone, FaSearch, FaUser } from 'react-icons/fa';
+import { getFromApi } from '@/lib/urep-api';
+import useSWR from 'swr';
+
+interface ApiUser {
+  id?: string;
+  full_name?: string;
+  name?: string;
+  email?: string;
+  phone_number?: string;
+  gender?: string;
+  selected_program?: string;
+  state_of_residence?: string;
+  lga_of_residence?: string;
+  demographic?: {
+    education_level?: string;
+    occupation_status?: string;
+    state_of_origin?: string;
+    lga_of_origin?: string;
+  };
+  education?: {
+    education_level?: string;
+    occupation_status?: string;
+  };
+  youth_validation?: {
+    organization?: string;
+  } | null;
+}
 
 export default function RegistrantsPage() {
-  // Mock data for charts
-  const statusData = [
-    { name: 'Completed', value: 65 },
-    { name: 'Pending', value: 35 }
-  ];
+  const [selectedId, setSelectedId] = useState('');
+  const [search, setSearch] = useState('');
+  const {
+    data: registrants = [],
+    error,
+    isLoading,
+  } = useSWR(
+    '/api/admin/users',
+    (path: string) => getFromApi<ApiUser[]>(path, true),
+  );
 
-  const programData = [
-    { name: 'National Youth', value: 45 },
-    { name: 'African Youth', value: 30 },
-    { name: 'Bakeprenuer', value: 25 }
-  ];
+  useEffect(() => {
+    if (!selectedId && registrants[0]?.id) setSelectedId(registrants[0].id);
+  }, [registrants, selectedId]);
 
-  // Colors for charts
-  const STATUS_COLORS = ['#00C49F', '#FFBB28'];
-  const PROGRAM_COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return registrants;
+    return registrants.filter((user) =>
+      [user.full_name, user.name, user.email, user.phone_number, user.selected_program]
+        .some((value) => value?.toLowerCase().includes(query)),
+    );
+  }, [registrants, search]);
 
-  // Mock data for demonstration
-  const registrants = [
-    { 
-      id: 1, 
-      name: 'John Doe', 
-      email: 'john@example.com', 
-      phone: '08012345678', 
-      status: 'Completed',
-      dob: '1990-05-15',
-      address: '123 Main St, Lagos',
-      education: 'Bachelor of Science',
-      occupation: 'Software Engineer',
-      program: 'National Youth Program',
-      registrationDate: '2023-10-05'
-    },
-    { 
-      id: 2, 
-      name: 'Jane Smith', 
-      email: 'jane@example.com', 
-      phone: '08023456789', 
-      status: 'Pending',
-      dob: '1992-08-22',
-      address: '456 Oak Ave, Abuja',
-      education: 'Master of Arts',
-      occupation: 'Teacher',
-      program: 'African Youth Program',
-      registrationDate: '2023-10-10'
-    },
-    { 
-      id: 3, 
-      name: 'Robert Johnson', 
-      email: 'robert@example.com', 
-      phone: '08034567890', 
-      status: 'Completed',
-      dob: '1988-12-03',
-      address: '789 Pine Rd, Port Harcourt',
-      education: 'PhD in Economics',
-      occupation: 'Researcher',
-      program: 'Bakeprenuer Program',
-      registrationDate: '2023-09-28'
-    },
-  ];
-
-  // State for selected registrant (in a real app, this would use React.useState)
-  const selectedRegistrant = registrants[0]; // Default to first registrant for demo
+  const selected = filtered.find((user) => user.id === selectedId) ?? filtered[0];
+  const education = selected?.education ?? selected?.demographic;
 
   return (
     <div className="p-6">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Registrants</h1>
-        <p className="text-gray-600">Search and view detailed information about registrants</p>
+        <p className="text-gray-600">Registered users from the UREP API</p>
       </div>
 
-      {/* Charts Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-          <div className="flex items-center mb-3 sm:mb-4">
-            <FaChartPie className="text-green-600 mr-2" />
-            <h2 className="text-lg sm:text-xl font-semibold">Registration Status</h2>
-          </div>
-          <div className="h-48 sm:h-56 lg:h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({percent }) => `${(percent * 100).toFixed(0)}%`}
-                  outerRadius={60}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {error && (
+        <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          {error instanceof Error ? error.message : 'Unable to load registrants.'}
+        </p>
+      )}
+      {isLoading && <p role="status" className="text-sm text-gray-500">Loading registrants...</p>}
 
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-          <div className="flex items-center mb-3 sm:mb-4">
-            <FaChartPie className="text-green-600 mr-2" />
-            <h2 className="text-lg sm:text-xl font-semibold">Program Distribution</h2>
-          </div>
-          <div className="h-48 sm:h-56 lg:h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={programData}
-                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{fontSize: 12}} />
-                <YAxis tick={{fontSize: 12}} />
-                <Tooltip />
-                <Legend wrapperStyle={{fontSize: '12px'}} />
-                <Bar dataKey="value" name="Registrants" fill="#8884d8">
-                  {programData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PROGRAM_COLORS[index % PROGRAM_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Results Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Search Panel */}
-        <div className="col-span-1 bg-white p-4 sm:p-6 rounded-lg shadow">
-          <h2 className="text-lg sm:text-xl font-semibold mb-4">Search Registrants</h2>
-
-          {/* Search Input */}
-          <div className="relative mb-6">
-            <input
-              type="text"
-              placeholder="Search by name, email, or phone..."
-              className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-            <FaSearch className="absolute left-3 top-3 text-gray-400" />
-          </div>
-
-          {/* Filters */}
-          <div className="mb-6">
-            <h3 className="font-medium mb-2">Filter by Status</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
-              <label className="flex items-center">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-green-600" checked />
-                <span className="ml-2 text-sm sm:text-base">All</span>
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-green-600" />
-                <span className="ml-2 text-sm sm:text-base">Completed</span>
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-green-600" />
-                <span className="ml-2 text-sm sm:text-base">Pending</span>
-              </label>
+      {!isLoading && !error && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <aside className="rounded-lg bg-white p-4 shadow">
+            <div className="relative mb-4">
+              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by name, email, or phone..."
+                className="w-full rounded-md border py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
             </div>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="font-medium mb-2">Filter by Program</h3>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-green-600" checked />
-                <span className="ml-2 text-sm sm:text-base">All Programs</span>
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-green-600" />
-                <span className="ml-2 text-sm sm:text-base">National Youth Program</span>
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-green-600" />
-                <span className="ml-2 text-sm sm:text-base">African Youth Program</span>
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-green-600" />
-                <span className="ml-2 text-sm sm:text-base">Bakeprenuer Program</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Registrants List */}
-          <div>
-            <h3 className="font-medium mb-2">Results</h3>
-            <div className="space-y-2">
-              {registrants.map(registrant => (
-                <div 
-                  key={registrant.id}
-                  className={`p-3 rounded-md cursor-pointer ${
-                    selectedRegistrant.id === registrant.id 
-                      ? 'bg-green-100 border border-green-300' 
-                      : 'hover:bg-gray-100'
-                  }`}
+            <p className="mb-3 text-xs font-semibold uppercase text-gray-400">{filtered.length} result(s)</p>
+            <div className="max-h-[520px] space-y-2 overflow-y-auto">
+              {filtered.map((user) => (
+                <button
+                  type="button"
+                  key={user.id}
+                  onClick={() => setSelectedId(user.id ?? '')}
+                  className={`w-full rounded-md p-3 text-left ${selected?.id === user.id ? 'border border-green-300 bg-green-100' : 'hover:bg-gray-100'}`}
                 >
-                  <div className="font-medium">{registrant.name}</div>
-                  <div className="text-sm text-gray-600">{registrant.email}</div>
-                  <div className="text-sm text-gray-600">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      registrant.status === 'Completed' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {registrant.status}
-                    </span>
-                  </div>
-                </div>
+                  <div className="font-medium">{user.full_name ?? user.name ?? 'Unnamed registrant'}</div>
+                  <div className="text-sm text-gray-600">{user.email ?? 'No email'}</div>
+                </button>
               ))}
+              {!filtered.length && <p className="py-8 text-center text-sm text-gray-500">No registrants found</p>}
             </div>
-          </div>
-        </div>
+          </aside>
 
-        {/* Registrant Details */}
-        <div className="col-span-1 lg:col-span-2 bg-white p-4 sm:p-6 rounded-lg shadow">
-          <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Registrant Profile</h2>
-
-          {selectedRegistrant ? (
-            <div>
-              {/* Basic Info */}
-              <div className="mb-6 sm:mb-8">
-                <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4 pb-2 border-b">Basic Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-start">
-                    <FaUser className="mt-1 mr-2 text-green-600" />
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Full Name</div>
-                      <div className="text-sm sm:text-base font-medium">{selectedRegistrant.name}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <FaEnvelope className="mt-1 mr-2 text-green-600" />
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Email Address</div>
-                      <div className="text-sm sm:text-base font-medium">{selectedRegistrant.email}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <FaPhone className="mt-1 mr-2 text-green-600" />
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Phone Number</div>
-                      <div className="text-sm sm:text-base font-medium">{selectedRegistrant.phone}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <FaCalendarAlt className="mt-1 mr-2 text-green-600" />
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Date of Birth</div>
-                      <div className="text-sm sm:text-base font-medium">{selectedRegistrant.dob}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start col-span-1 sm:col-span-2">
-                    <FaMapMarkerAlt className="mt-1 mr-2 text-green-600" />
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Address</div>
-                      <div className="text-sm sm:text-base font-medium">{selectedRegistrant.address}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Education & Occupation */}
-              <div className="mb-6 sm:mb-8">
-                <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4 pb-2 border-b">Education & Occupation</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-start">
-                    <FaGraduationCap className="mt-1 mr-2 text-green-600" />
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Education</div>
-                      <div className="text-sm sm:text-base font-medium">{selectedRegistrant.education}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <FaBriefcase className="mt-1 mr-2 text-green-600" />
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Occupation</div>
-                      <div className="text-sm sm:text-base font-medium">{selectedRegistrant.occupation}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Program Information */}
+          <section className="rounded-lg bg-white p-6 shadow lg:col-span-2">
+            {selected ? (
               <div>
-                <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4 pb-2 border-b">Program Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-2 text-green-600">📋</div>
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Program</div>
-                      <div className="text-sm sm:text-base font-medium">{selectedRegistrant.program}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <FaCalendarAlt className="mt-1 mr-2 text-green-600" />
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Registration Date</div>
-                      <div className="text-sm sm:text-base font-medium">{selectedRegistrant.registrationDate}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-2 text-green-600">🔄</div>
-                    <div>
-                      <div className="text-xs sm:text-sm text-gray-500">Status</div>
-                      <div>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          selectedRegistrant.status === 'Completed' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {selectedRegistrant.status}
-                        </span>
+                <h2 className="mb-6 border-b pb-3 text-xl font-semibold">Registrant Profile</h2>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  {[
+                    [FaUser, 'Full Name', selected.full_name ?? selected.name],
+                    [FaEnvelope, 'Email Address', selected.email],
+                    [FaPhone, 'Phone Number', selected.phone_number],
+                    [FaMapMarkerAlt, 'Residence', [selected.state_of_residence, selected.lga_of_residence].filter(Boolean).join(', ')],
+                    [FaMapMarkerAlt, 'Origin', [selected.demographic?.state_of_origin, selected.demographic?.lga_of_origin].filter(Boolean).join(', ')],
+                    [FaUser, 'Gender', selected.gender],
+                    [FaUser, 'Program', selected.selected_program],
+                    [FaUser, 'Education', education?.education_level],
+                    [FaUser, 'Occupation', education?.occupation_status],
+                  ].map(([Icon, label, value]) => {
+                    const FieldIcon = Icon as typeof FaUser;
+                    return (
+                      <div key={String(label)} className="flex items-start gap-2">
+                        <FieldIcon className="mt-1 text-green-600" />
+                        <div>
+                          <div className="text-sm text-gray-500">{String(label)}</div>
+                          <div className="font-medium">{String(value ?? 'Not provided')}</div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-64">
-              <div className="text-gray-400 mb-2">
-                <svg className="w-12 h-12 sm:w-16 sm:h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <p className="text-gray-500 text-sm sm:text-base">Select a registrant to view details</p>
-            </div>
-          )}
+            ) : (
+              <div className="py-16 text-center text-gray-500">Select a registrant to view details</div>
+            )}
+          </section>
         </div>
-      </div>
+      )}
     </div>
   );
 }

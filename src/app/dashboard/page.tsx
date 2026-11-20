@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -19,7 +19,8 @@ import {
   UserRound,
 } from 'lucide-react';
 import { TextField } from '@/components';
-import { postToApi, REGISTERED_USER_ID_KEY } from '@/lib/urep-api';
+import { clearAuth, getFromApi, postToApi, REGISTERED_USER_ID_KEY } from '@/lib/urep-api';
+import useSWR from 'swr';
 
 type DashboardTab = 'profile' | 'programs';
 
@@ -133,10 +134,61 @@ export default function UserDashboardPage() {
   const [saveError, setSaveError] = useState('');
   const [logoutError, setLogoutError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserId(sessionStorage.getItem(REGISTERED_USER_ID_KEY));
+  }, []);
+
+  const profileKey = userId
+    ? `/api/users/${encodeURIComponent(userId)}`
+    : null;
+  const {
+    data,
+    error: loadError,
+    isLoading,
+    mutate: mutateProfile,
+  } = useSWR(
+    profileKey,
+    (path: string) => getFromApi<Record<string, unknown>>(path),
+  );
+  const loadErrorMessage = loadError instanceof Error
+    ? loadError.message
+    : loadError
+      ? 'Unable to load your profile.'
+      : '';
+
+  useEffect(() => {
+    if (!data) return;
+    const demographic = typeof data.demographic === 'object' && data.demographic !== null
+      ? data.demographic as Record<string, unknown>
+      : {};
+    const education = typeof data.education === 'object' && data.education !== null
+      ? data.education as Record<string, unknown>
+      : {};
+    const read = (key: string, ...records: Record<string, unknown>[]) => {
+      for (const record of records) {
+        const value = record[key];
+        if (typeof value === 'string' || typeof value === 'number') return String(value);
+      }
+      return '';
+    };
+    setProfile((current) => ({
+      state_of_origin: read('state_of_origin', demographic, data) || current.state_of_origin,
+      lga_of_origin: read('lga_of_origin', demographic, data) || current.lga_of_origin,
+      marital_status: read('marital_status', demographic, data) || current.marital_status,
+      disability: read('disability', demographic, data) || current.disability,
+      education_level: read('education_level', education, data) || current.education_level,
+      occupation_status: read('occupation_status', education, data) || current.occupation_status,
+      skills: read('skills', education, data) || current.skills,
+      area_of_interest: read('area_of_interest', education, data) || current.area_of_interest,
+      years_of_experience: read('years_of_experience', education, data) || current.years_of_experience,
+    }));
+  }, [data]);
 
   const handleLogout = () => {
     try {
-      sessionStorage.removeItem(REGISTERED_USER_ID_KEY);
+      clearAuth();
       router.push('/login');
     } catch {
       setLogoutError('Unable to log out. Please try again.');
@@ -178,6 +230,7 @@ export default function UserDashboardPage() {
         `/api/auth/users/${encodeURIComponent(userId)}/profile`,
         profile,
       );
+      await mutateProfile();
       setSaveMessage('Your profile settings have been saved.');
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Unable to save your profile. Please try again.');
@@ -274,6 +327,12 @@ export default function UserDashboardPage() {
               <p role="alert" className="mb-5 text-sm text-red-600">
                 {logoutError}
               </p>
+            )}
+            {loadError && activeTab === 'profile' && (
+              <p role="alert" className="mb-5 text-sm text-red-600">{loadErrorMessage}</p>
+            )}
+            {isLoading && activeTab === 'profile' && (
+              <p role="status" className="mb-5 text-sm text-gray-500">Loading your profile...</p>
             )}
             {activeTab === 'profile' ? (
               <>

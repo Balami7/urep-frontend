@@ -12,6 +12,7 @@ import {
     REGISTERED_USER_ID_KEY,
     REGISTRATION_REFERENCE_KEY,
     REGISTRATION_CONTEXT_KEY,
+    storeUserAuth,
 } from "@/lib/urep-api";
 
 const GUEST_ORGANIZATION_CODE = 'UREP-GUEST';
@@ -485,6 +486,9 @@ export default function RegisterPage() {
                     id: string;
                     official_email: string;
                     urep_code: string;
+                    access_token?: string;
+                    token_type?: string;
+                    expires_in?: number;
                 }>('/api/auth/staff/register', {
                     official_email: email,
                     full_name: name,
@@ -492,6 +496,7 @@ export default function RegisterPage() {
                     gender,
                     staff_id: staffId,
                 });
+                storeUserAuth(staffRegistration);
 
                 if (!staffRegistration.id) {
                     throw new Error('The registration service did not return a staff ID. Please try again.');
@@ -520,6 +525,9 @@ export default function RegisterPage() {
                     id: string;
                     email: string;
                     urep_code: string;
+                    access_token?: string;
+                    token_type?: string;
+                    expires_in?: number;
                 }>('/api/auth/register', {
                     full_name: name,
                     email,
@@ -534,6 +542,7 @@ export default function RegisterPage() {
                     state_of_residence: stateOfResidence,
                     lga_of_residence: lgaOfResidence,
                 });
+                storeUserAuth(registration);
 
                 if (!registration.id) {
                     throw new Error('The registration service did not return a user ID. Please try again.');

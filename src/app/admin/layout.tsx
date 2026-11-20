@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { LayoutGrid, AppWindow, FileText } from 'lucide-react';
+import { ADMIN_ACCESS_TOKEN_KEY } from '@/lib/urep-api';
 
 export default function AdminLayout({
   children,
@@ -11,12 +12,30 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    if (!sessionStorage.getItem(ADMIN_ACCESS_TOKEN_KEY)) {
+      router.replace('/admin-login');
+      return;
+    }
+    setIsAuthorized(true);
+  }, [router]);
 
   const navItems = [
     { name: 'Home', href: '/admin', icon: LayoutGrid },
     { name: 'Programs', href: '/admin/programs', icon: AppWindow },
     { name: 'Reports', href: '/admin/reports', icon: FileText },
   ];
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#F4F4F4] text-sm text-gray-500">
+        Checking admin session...
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#F4F4F4] text-[#111111] font-sans">
